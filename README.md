@@ -1,5 +1,7 @@
 <a name="readme-top"></a>
 
+[![Stargazers][stars-shield]][stars-url]
+[![Forks][forks-shield]][forks-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 
@@ -227,6 +229,10 @@ Project Link: [https://github.com/andrey-pr/OpenBafangTool](https://github.com/a
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[forks-shield]: https://img.shields.io/github/forks/andrey-pr/OpenBafangTool.svg?style=for-the-badge
+[forks-url]: https://github.com/andrey-pr/OpenBafangTool/network/members
+[stars-shield]: https://img.shields.io/github/stars/andrey-pr/OpenBafangTool.svg?style=for-the-badge
+[stars-url]: https://github.com/andrey-pr/OpenBafangTool/stargazers
 [issues-shield]: https://img.shields.io/github/issues/andrey-pr/OpenBafangTool.svg?style=for-the-badge
 [issues-url]: https://github.com/andrey-pr/OpenBafangTool/issues
 [license-shield]: https://img.shields.io/github/license/andrey-pr/OpenBafangTool.svg?style=for-the-badge
