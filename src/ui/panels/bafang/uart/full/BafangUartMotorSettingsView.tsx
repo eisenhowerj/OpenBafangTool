@@ -1,4 +1,7 @@
 import React from 'react';
+import fs from 'fs';
+import path from 'path';
+import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
 import {
     Typography,
     Descriptions,
@@ -7,7 +10,10 @@ import {
     message,
     Switch,
     Popconfirm,
+    Button,
+    Dropdown,
 } from 'antd';
+import Menu from 'antd/lib/menu';
 import type { DescriptionsProps } from 'antd';
 import { SyncOutlined, DeliveredProcedureOutlined } from '@ant-design/icons';
 import BafangUartMotor from '../../../../../device/high-level/BafangUartMotor';
@@ -54,6 +60,8 @@ type SettingsState = BafangUartMotorInfo &
         throttle_speed_limit_unit: string;
         lastUpdateTime: number;
         oldStyle: boolean;
+        presetFiles: string[];
+        selectedPreset: string;
     };
 
 /* eslint-disable camelcase */
@@ -71,6 +79,8 @@ class BafangUartMotorSettingsView extends React.Component<
 
     private packages_written: number;
 
+    presetsDir = path.join(process.cwd(), 'Presets');
+
     constructor(props: SettingsProps) {
         super(props);
         const { connection } = this.props;
@@ -79,39 +89,109 @@ class BafangUartMotorSettingsView extends React.Component<
         this.initial_pedal_parameters = connection.getPedalParameters();
         this.initial_throttle_parameters = connection.getThrottleParameters();
         this.packages_written = 0;
-        this.state = {
-            ...this.initial_info,
-            ...this.initial_basic_parameters,
-            ...this.initial_pedal_parameters,
-            ...this.initial_throttle_parameters,
-            pedal_speed_limit_unit:
-                this.initial_pedal_parameters.pedal_speed_limit ===
-                SpeedLimitByDisplay
-                    ? 'by_display'
-                    : 'kmh',
-            throttle_speed_limit_unit:
-                this.initial_throttle_parameters.throttle_speed_limit ===
-                SpeedLimitByDisplay
-                    ? 'by_display'
-                    : 'kmh',
-            lastUpdateTime: 0,
-            oldStyle: false,
-        };
-        this.getElectricalParameterItems =
-            this.getElectricalParameterItems.bind(this);
-        this.getPhysicalParameterItems =
-            this.getPhysicalParameterItems.bind(this);
+        this.getElectricalParameterItems = this.getElectricalParameterItems.bind(this);
+        this.getPhysicalParameterItems = this.getPhysicalParameterItems.bind(this);
         this.getDriveParameterItems = this.getDriveParameterItems.bind(this);
         this.getOtherItems = this.getOtherItems.bind(this);
         this.saveParameters = this.saveParameters.bind(this);
         this.updateData = this.updateData.bind(this);
         this.onWriteSuccess = this.onWriteSuccess.bind(this);
         this.onWriteError = this.onWriteError.bind(this);
+        this.handlePresetSelect = this.handlePresetSelect.bind(this);
+        this.handlePresetLoad = this.handlePresetLoad.bind(this);
+        this.handlePresetSave = this.handlePresetSave.bind(this);
+        this.state = {
+            ...this.initial_info,
+            ...this.initial_basic_parameters,
+            ...this.initial_pedal_parameters,
+            ...this.initial_throttle_parameters,
+            pedal_speed_limit_unit:
+                this.initial_pedal_parameters.pedal_speed_limit === SpeedLimitByDisplay ? 'by_display' : 'kmh',
+            throttle_speed_limit_unit:
+                this.initial_throttle_parameters.throttle_speed_limit === SpeedLimitByDisplay ? 'by_display' : 'kmh',
+            lastUpdateTime: 0,
+            oldStyle: false,
+            presetFiles: [],
+            selectedPreset: '',
+        };
         connection.emitter.removeAllListeners('write-success');
         connection.emitter.removeAllListeners('write-error');
         connection.emitter.on('data', this.updateData);
         connection.emitter.on('write-success', this.onWriteSuccess);
         connection.emitter.on('write-error', this.onWriteError);
+    }
+
+    componentDidMount(): void {
+        this.setState({ presetFiles: this.getPresetFiles() });
+    }
+
+    getPresetFiles(): string[] {
+        try {
+            return listPresetFiles(this.presetsDir);
+        } catch (err) {
+            return [];
+        }
+    }
+
+    handlePresetSelect(preset: string): void {
+        this.setState({ selectedPreset: preset });
+    }
+
+    handlePresetLoad(): void {
+        const { selectedPreset } = this.state;
+        if (!selectedPreset) return;
+        try {
+            const settings: SettingsObject = loadSettingsFile(selectedPreset);
+            const basic = settings.Basic || {};
+            const pedal = settings['Pedal Assist'] || settings.Pedal_Assist || {};
+            const throttle = settings['Throttle Handle'] || settings.Throttle_Handle || {};
+            this.setState({
+                low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
+                current_limit: basic.LC ?? this.state.current_limit,
+                wheel_diameter: basic.WD ?? this.state.wheel_diameter,
+                magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
+                speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
+                pedal_type: pedal.PT ?? this.state.pedal_type,
+                pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
+                pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
+                throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
+                throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
+                throttle_mode: throttle.MODE ?? this.state.throttle_mode,
+            });
+            message.success('Preset loaded!');
+        } catch (e) {
+            message.error('Failed to load preset.');
+        }
+    }
+
+    handlePresetSave(): void {
+        const { selectedPreset } = this.state;
+        if (!selectedPreset) return;
+        try {
+            const settings: SettingsObject = {
+                Basic: {
+                    LBP: this.state.low_battery_protection,
+                    LC: this.state.current_limit,
+                    WD: this.state.wheel_diameter,
+                    SMM: this.state.magnets_per_wheel_rotation,
+                    SMS: this.state.speedmeter_type,
+                },
+                'Pedal Assist': {
+                    PT: this.state.pedal_type,
+                    DA: this.state.pedal_assist_level,
+                    SL: this.state.pedal_speed_limit,
+                },
+                'Throttle Handle': {
+                    SV: this.state.throttle_start_voltage,
+                    EV: this.state.throttle_end_voltage,
+                    MODE: this.state.throttle_mode,
+                },
+            };
+            saveSettingsFile(selectedPreset, settings);
+            message.success('Preset saved!');
+        } catch (e) {
+            message.error('Failed to save preset.');
+        }
     }
 
     onWriteSuccess(pkg_code: string): void {
@@ -906,14 +986,36 @@ class BafangUartMotorSettingsView extends React.Component<
     render() {
         const { connection } = this.props;
         const { oldStyle } = this.state;
+        const presetMenu = (
+            <Menu
+                onClick={({ key }) => this.handlePresetSelect(key)}
+                selectedKeys={[this.state.selectedPreset]}
+            >
+                {this.state.presetFiles.map((file) => (
+                    <Menu.Item key={file}>{path.basename(file)}</Menu.Item>
+                ))}
+            </Menu>
+        );
         return (
             <div style={{ margin: '36px' }}>
                 <Typography.Title level={2} style={{ margin: 0 }}>
                     {i18n.t('uart_motor_parameters_title')}
                 </Typography.Title>
+                <div style={{ marginBottom: 16 }}>
+                    <Dropdown overlay={presetMenu} trigger={['click']}>
+                        <Button>
+                            {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select Preset'}
+                        </Button>
+                    </Dropdown>
+                    <Button style={{ marginLeft: 8 }} onClick={this.handlePresetLoad} disabled={!this.state.selectedPreset}>
+                        Load
+                    </Button>
+                    <Button style={{ marginLeft: 8 }} onClick={this.handlePresetSave} disabled={!this.state.selectedPreset}>
+                        Save
+                    </Button>
+                </div>
                 <br />
                 <Typography.Title level={5} style={{ margin: 0 }}>
-                    {i18n.t('old_style_layout')}&nbsp;&nbsp;
                     <Switch
                         checked={oldStyle}
                         onChange={(value) => this.setState({ oldStyle: value })}
