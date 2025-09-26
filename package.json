@@ -80,6 +80,7 @@
     }
   },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "@uiw/react-markdown-preview": "^5.1.1",
     "antd": "^5.18.1",
     "appdata-path": "^1.0.0",
