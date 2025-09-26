@@ -29,8 +29,13 @@ function parseTxtSettings(content: string): SettingsObject {
             currentSection = line.trim().slice(1, -1);
             result[currentSection] = {};
         } else if (line.includes('=') && currentSection) {
-            const [key, value] = line.split('=');
-            result[currentSection][key.trim()] = Number(value.trim());
+            const [key, value] = line.split('=', 2);
+            const numValue = Number(value.trim());
+            if (!isNaN(numValue)) {
+                result[currentSection][key.trim()] = numValue;
+            } else {
+                console.warn(`Invalid number for key "${key.trim()}" in section "[${currentSection}]": "${value.trim()}"`);
+            }
         }
     }
     return result;

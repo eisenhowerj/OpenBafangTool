@@ -1,5 +1,4 @@
 import React from 'react';
-import fs from 'fs';
 import path from 'path';
 import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
 import {
@@ -159,8 +158,11 @@ class BafangUartMotorSettingsView extends React.Component<
                 throttle_mode: throttle.MODE ?? this.state.throttle_mode,
             });
             message.success('Preset loaded!');
-        } catch (e) {
-            message.error('Failed to load preset.');
+        } catch (e: any) {
+            // Log the error for debugging
+            // eslint-disable-next-line no-console
+            console.error('Error loading preset:', e);
+            message.error(`Failed to load preset: ${e.message || e}`);
         }
     }
 
@@ -190,7 +192,10 @@ class BafangUartMotorSettingsView extends React.Component<
             saveSettingsFile(selectedPreset, settings);
             message.success('Preset saved!');
         } catch (e) {
-            message.error('Failed to save preset.');
+            // Log the error for debugging
+            // eslint-disable-next-line no-console
+            console.error('Failed to save preset:', e);
+            message.error(`Failed to save preset: ${e instanceof Error ? e.message : String(e)}`);
         }
     }
 
