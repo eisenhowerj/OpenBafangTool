@@ -649,17 +649,35 @@ class BafangUartMotorSettingsView extends React.Component<
                 1,
                 this.state.max_current,
             ),
-            generateEditableNumberListItemWithWarning(
-                i18n.t('wheel_diameter'),
-                this.state.wheel_diameter,
-                i18n.t('wheel_diameter_warning'),
-                12,
-                29,
-                (wheel_diameter) => this.setState({ wheel_diameter }),
-                '″',
-                1,
-                100,
-            ),
+            {
+                key: 'wheel_diameter_basic',
+                label: (
+                    <>
+                        {i18n.t('wheel_diameter')}
+                        <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.wheel_diameter}
+                        unit="″"
+                        min={1}
+                        max={100}
+                        onNewValue={(wheel_diameter) => this.setState({ wheel_diameter })}
+                        warningText={i18n.t('wheel_diameter_warning')}
+                        warningBelow={12}
+                        warningAbove={29}
+                    />
+                ),
+            },
             {
                 key: 'speed_meter_signals',
                 label: (
