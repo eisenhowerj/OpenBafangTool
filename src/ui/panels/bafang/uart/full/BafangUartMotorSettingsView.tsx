@@ -11,9 +11,10 @@ import {
     Popconfirm,
     Button,
     Dropdown,
+    Tooltip,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
-import { SyncOutlined, DeliveredProcedureOutlined } from '@ant-design/icons';
+import { SyncOutlined, DeliveredProcedureOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import BafangUartMotor from '../../../../../device/high-level/BafangUartMotor';
 import {
     AssistLevel,
@@ -287,18 +288,35 @@ class BafangUartMotorSettingsView extends React.Component<
 
     getPhysicalParameterItems(): DescriptionsProps['items'] {
         return [
-            generateAnnotatedEditableNumberListItemWithWarning(
-                i18n.t('wheel_diameter'),
-                this.state.wheel_diameter,
-                i18n.t('wheel_diameter_warning'),
-                12,
-                29,
-                (wheel_diameter) => this.setState({ wheel_diameter }),
-                'NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement',
-                '″',
-                1,
-                100,
-            ),
+            {
+                key: 'wheel_diameter',
+                label: (
+                    <>
+                        {i18n.t('wheel_diameter')}
+                        <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, becauseit will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.wheel_diameter}
+                        unit="″"
+                        min={1}
+                        max={100}
+                        onNewValue={(wheel_diameter) => this.setState({ wheel_diameter })}
+                        warningText={i18n.t('wheel_diameter_warning')}
+                        warningBelow={12}
+                        warningAbove={29}
+                    />
+                ),
+            },
             generateAnnotatedEditableNumberListItemWithWarning(
                 'Number of speed meter magnets on wheel',
                 this.state.magnets_per_wheel_rotation,
