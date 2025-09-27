@@ -1,4 +1,6 @@
 import { deepCopy } from 'deep-copy-ts';
+import log from 'electron-log/renderer';
+import EventEmitter from 'events';
 import { BafangCanSensorRealtime } from '../../../types/BafangCanSystemTypes';
 import {
     getSensorHVDemo,
@@ -8,12 +10,9 @@ import {
     getSensorSVDemo,
 } from '../../../utils/can/demo_object_provider';
 import BesstDevice from '../../besst/besst';
-import { BesstReadedCanFrame } from '../../besst/besst-types';
-import { DeviceNetworkId } from '../../besst/besst-types';
+import { BesstReadedCanFrame, DeviceNetworkId } from '../../besst/besst-types';
 import { charsToString } from '../../../utils/utils';
-import log from 'electron-log/renderer';
 import { RequestManager } from '../../../utils/can/RequestManager';
-import EventEmitter from 'events';
 import { readParameter, rereadParameter } from '../../../utils/can/utils';
 import { CanReadCommandsList } from '../../../constants/BafangCanConstants';
 import { BafangCanSensorParser } from '../../../parser/bafang/can/parser/Sensor';
@@ -139,8 +138,8 @@ export default class BafangCanSensor {
             CanReadCommandsList.ModelNumber,
             CanReadCommandsList.SerialNumber,
         ];
-        let readedSuccessfully = 0,
-            readedNonSuccessfully = 0;
+        let readedSuccessfully = 0;
+        let readedNonSuccessfully = 0;
 
         commands.forEach((command) => {
             new Promise<boolean>((resolve, reject) => {

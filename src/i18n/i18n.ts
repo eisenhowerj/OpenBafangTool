@@ -1,7 +1,7 @@
 import { I18n } from 'i18n-js';
+import { PickerLocale } from 'antd/es/date-picker/generatePicker';
 import en from '../../locales/en.json';
 import blank from '../../locales/blank.json';
-import { PickerLocale } from 'antd/es/date-picker/generatePicker';
 
 const i18n = new I18n({
     en: { ...en },

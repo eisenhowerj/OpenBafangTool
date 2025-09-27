@@ -1,4 +1,6 @@
 import { deepCopy } from 'deep-copy-ts';
+import log from 'electron-log/renderer';
+import EventEmitter from 'events';
 import {
     BafangCanDisplayData1,
     BafangCanDisplayData2,
@@ -20,13 +22,11 @@ import {
 } from '../../../utils/can/demo_object_provider';
 import BesstDevice from '../../besst/besst';
 import { BesstReadedCanFrame, DeviceNetworkId } from '../../besst/besst-types';
-import log from 'electron-log/renderer';
 import { RequestManager } from '../../../utils/can/RequestManager';
 import {
     CanReadCommandsList,
     CanWriteCommandsList,
 } from '../../../constants/BafangCanConstants';
-import EventEmitter from 'events';
 import {
     readParameter,
     rereadParameter,
@@ -231,8 +231,8 @@ export default class BafangCanDisplay {
             CanReadCommandsList.DisplayDataBlock1,
             CanReadCommandsList.DisplayDataBlock2,
         ];
-        let readedSuccessfully = 0,
-            readedUnsuccessfully = 0;
+        let readedSuccessfully = 0;
+        let readedUnsuccessfully = 0;
 
         commands.forEach((command) => {
             new Promise<boolean>((resolve, reject) => {
@@ -272,9 +272,9 @@ export default class BafangCanDisplay {
             return;
         }
         if (!this.besstDevice || !this.requestManager) return;
-        let wroteSuccessfully = 0,
-            wroteUnsuccessfully = 0;
-        let writePromises: Promise<boolean>[] = [];
+        let wroteSuccessfully = 0;
+        let wroteUnsuccessfully = 0;
+        const writePromises: Promise<boolean>[] = [];
         prepareStringWritePromise(
             this.manufacturer,
             DeviceNetworkId.DISPLAY,
@@ -335,7 +335,9 @@ export default class BafangCanDisplay {
             return new Promise<boolean>((resolve) => resolve(false));
         }
         if (this.demo) {
-            console.log(`Demo mode: new display time is ${hours}:${minutes}:${seconds}`);
+            console.log(
+                `Demo mode: new display time is ${hours}:${minutes}:${seconds}`,
+            );
             return new Promise<boolean>((resolve) => resolve(true));
         }
         return new Promise<boolean>((resolve, reject) => {

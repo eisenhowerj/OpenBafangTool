@@ -42,7 +42,10 @@ class BafangUartMotorInfoView extends React.Component<InfoProps, InfoState> {
                 i18n.t('manufacturer'),
                 info.manufacturer,
             ),
-            generateSimpleStringListItem(i18n.t('system_code'), info.system_code),
+            generateSimpleStringListItem(
+                i18n.t('system_code'),
+                info.system_code,
+            ),
         ];
     }
 
@@ -66,7 +69,10 @@ class BafangUartMotorInfoView extends React.Component<InfoProps, InfoState> {
         const info = connection.getInfo();
         return [
             generateSimpleStringListItem(i18n.t('voltage'), info.voltage),
-            generateSimpleStringListItem(i18n.t('max_current'), info.max_current),
+            generateSimpleStringListItem(
+                i18n.t('max_current'),
+                info.max_current,
+            ),
         ];
     }
 

@@ -51,8 +51,8 @@ export default class BafangBesstTool {
         }
         if (this.readingInProgress) return;
         this.readingInProgress = true;
-        let finishedSuccessfull = 0,
-            finishedNonSuccessfull = 0;
+        let finishedSuccessfull = 0;
+        let finishedNonSuccessfull = 0;
         const finish = (success: boolean) => {
             if (success) finishedSuccessfull++;
             else finishedNonSuccessfull++;

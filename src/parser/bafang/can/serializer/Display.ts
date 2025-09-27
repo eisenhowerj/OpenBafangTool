@@ -1,9 +1,9 @@
-import { CanWriteCommandsList } from "../../../../constants/BafangCanConstants";
-import BesstDevice from "../../../../device/besst/besst";
-import { DeviceNetworkId } from "../../../../device/besst/besst-types";
-import { RequestManager } from "../../../../utils/can/RequestManager";
-import { intToByteArray } from "../../../../utils/utils";
-import { WriteFunctionType, addWritePromise } from "./common";
+import { CanWriteCommandsList } from '../../../../constants/BafangCanConstants';
+import BesstDevice from '../../../../device/besst/besst';
+import { DeviceNetworkId } from '../../../../device/besst/besst-types';
+import { RequestManager } from '../../../../utils/can/RequestManager';
+import { intToByteArray } from '../../../../utils/utils';
+import { WriteFunctionType, addWritePromise } from './common';
 
 function serializeMileage(mileage: number): number[] {
     return intToByteArray(mileage, 3);

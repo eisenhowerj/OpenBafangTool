@@ -51,7 +51,7 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({
             view: 'main_view',
             connection: newConnection,
-            interfaceType: interfaceType,
+            interfaceType,
         });
     }
 

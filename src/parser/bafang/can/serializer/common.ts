@@ -1,8 +1,8 @@
-import { CanCommand } from "../../../../constants/BafangCanConstants";
-import BesstDevice from "../../../../device/besst/besst";
-import { DeviceNetworkId } from "../../../../device/besst/besst-types";
-import { PromiseControls } from "../../../../types/common";
-import { RequestManager } from "../../../../utils/can/RequestManager";
+import { CanCommand } from '../../../../constants/BafangCanConstants';
+import BesstDevice from '../../../../device/besst/besst';
+import { DeviceNetworkId } from '../../../../device/besst/besst-types';
+import { PromiseControls } from '../../../../types/common';
+import { RequestManager } from '../../../../utils/can/RequestManager';
 
 export type WriteFunctionType = (
     target: DeviceNetworkId,
