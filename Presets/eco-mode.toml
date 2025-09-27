@@ -1,9 +1,7 @@
 [metadata]
 name = "Eco-Friendly Mode"
 description = "Energy-efficient configuration designed for maximum range and battery conservation on commuter rides."
-version = "1.0"
 author = "Commuter Pro"
-created = "2025-09-27"
 
 [Basic]
 LBP = 38

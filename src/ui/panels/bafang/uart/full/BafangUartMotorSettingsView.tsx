@@ -1,6 +1,6 @@
 import React from 'react';
 import path from 'path';
-import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
+import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject, SettingsMetadata } from '../../../../../utils/settingsLoader';
 import {
     Typography,
     Descriptions,
@@ -62,6 +62,8 @@ type SettingsState = BafangUartMotorInfo &
         oldStyle: boolean;
         presetFiles: string[];
         selectedPreset: string;
+        presetMetadata: Map<string, SettingsMetadata>;
+        selectedPresetInfo: { description?: string; author?: string; } | null;
     };
 
 /* eslint-disable camelcase */
@@ -114,6 +116,8 @@ class BafangUartMotorSettingsView extends React.Component<
             oldStyle: false,
             presetFiles: this.getInitialPresetFiles(),
             selectedPreset: '',
+            presetMetadata: new Map(),
+            selectedPresetInfo: null,
         };
         connection.emitter.removeAllListeners('write-success');
         connection.emitter.removeAllListeners('write-error');
@@ -129,6 +133,25 @@ class BafangUartMotorSettingsView extends React.Component<
             console.warn('Failed to load preset files:', err);
             return [];
         }
+    }
+
+    loadPresetMetadata(): void {
+        const metadataMap = new Map();
+        this.state.presetFiles.forEach(filePath => {
+            try {
+                const settings = loadSettingsFile(filePath);
+                if (settings.metadata) {
+                    metadataMap.set(filePath, settings.metadata);
+                }
+            } catch (err) {
+                console.warn(`Failed to load metadata for ${filePath}:`, err);
+            }
+        });
+        this.setState({ presetMetadata: metadataMap });
+    }
+
+    componentDidMount(): void {
+        this.loadPresetMetadata();
     }
 
     parseTxtSettings(content: string): SettingsObject {
@@ -153,7 +176,15 @@ class BafangUartMotorSettingsView extends React.Component<
     }
 
     handlePresetSelect(preset: string): void {
-        this.setState({ selectedPreset: preset });
+        const metadata = this.state.presetMetadata.get(preset);
+        const selectedPresetInfo = metadata ? {
+            description: metadata.description,
+            author: metadata.author,
+        } : null;
+        this.setState({ 
+            selectedPreset: preset,
+            selectedPresetInfo: selectedPresetInfo 
+        });
     }
 
     handlePresetLoadFromDropdown(): void {
@@ -1222,10 +1253,14 @@ class BafangUartMotorSettingsView extends React.Component<
         const presetMenuItems = {
             onClick: ({ key }: { key: string }) => this.handlePresetSelect(key),
             selectedKeys: [this.state.selectedPreset],
-            items: this.state.presetFiles.map((file) => ({
-                key: file,
-                label: path.basename(file),
-            })),
+            items: this.state.presetFiles.map((file) => {
+                const metadata = this.state.presetMetadata.get(file);
+                const displayName = metadata?.name || path.basename(file);
+                return {
+                    key: file,
+                    label: displayName,
+                };
+            }),
         };
         return (
             <div style={{ margin: '36px' }}>
@@ -1265,15 +1300,35 @@ class BafangUartMotorSettingsView extends React.Component<
                             key: 'shipped_presets',
                             label: 'Presets',
                             children: (
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Dropdown menu={presetMenuItems} trigger={['click']}>
-                                        <Button>
-                                            {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select'}
+                                <div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: this.state.selectedPresetInfo ? '8px' : '0' }}>
+                                        <Dropdown menu={presetMenuItems} trigger={['click']}>
+                                            <Button>
+                                                {(() => {
+                                                    if (!this.state.selectedPreset) return 'Select';
+                                                    const metadata = this.state.presetMetadata.get(this.state.selectedPreset);
+                                                    return metadata?.name || path.basename(this.state.selectedPreset);
+                                                })()}
+                                            </Button>
+                                        </Dropdown>
+                                        <Button onClick={this.handlePresetLoadFromDropdown} disabled={!this.state.selectedPreset}>
+                                            Load Preset
                                         </Button>
-                                    </Dropdown>
-                                    <Button onClick={this.handlePresetLoadFromDropdown} disabled={!this.state.selectedPreset}>
-                                        Load Preset
-                                    </Button>
+                                    </div>
+                                    {this.state.selectedPresetInfo && (
+                                        <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                                            {this.state.selectedPresetInfo.description && (
+                                                <div style={{ marginBottom: '4px' }}>
+                                                    <strong>Description:</strong> {this.state.selectedPresetInfo.description}
+                                                </div>
+                                            )}
+                                            {this.state.selectedPresetInfo.author && (
+                                                <div>
+                                                    <strong>Author:</strong> {this.state.selectedPresetInfo.author}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ),
                         },

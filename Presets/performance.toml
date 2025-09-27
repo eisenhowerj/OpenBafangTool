@@ -1,9 +1,7 @@
 [metadata]
 name = "High Performance Configuration"
 description = "Optimized for maximum power and performance on mountain trails with higher assist levels and current limits."
-version = "1.2"
 author = "MTB Enthusiast"
-created = "2025-09-27"
 
 [Basic]
 LBP = 45
