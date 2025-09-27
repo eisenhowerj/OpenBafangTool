@@ -1252,7 +1252,7 @@ class BafangUartMotorSettingsView extends React.Component<
                             label: 'Operations',
                             children: (
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Button onClick={this.handlePresetLoadFromFile} type="primary">
+                                    <Button onClick={this.handlePresetLoadFromFile}>
                                         Load from File...
                                     </Button>
                                     <Button onClick={this.handlePresetSave}>
