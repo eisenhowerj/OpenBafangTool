@@ -113,7 +113,7 @@ class BafangUartMotorSettingsView extends React.Component<
                 this.initial_throttle_parameters.throttle_speed_limit === SpeedLimitByDisplay ? 'by_display' : 'kmh',
             lastUpdateTime: 0,
             oldStyle: false,
-            presetFiles: [],
+            presetFiles: this.getInitialPresetFiles(),
             selectedPreset: '',
         };
         connection.emitter.removeAllListeners('write-success');
@@ -123,14 +123,11 @@ class BafangUartMotorSettingsView extends React.Component<
         connection.emitter.on('write-error', this.onWriteError);
     }
 
-    componentDidMount() {
-        this.setState({ presetFiles: this.getPresetFiles() });
-    }
-
-    getPresetFiles(): string[] {
+    getInitialPresetFiles(): string[] {
         try {
             return listPresetFiles(this.presetsDir);
         } catch (err) {
+            console.warn('Failed to load preset files:', err);
             return [];
         }
     }
