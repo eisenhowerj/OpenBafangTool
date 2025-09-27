@@ -1415,7 +1415,7 @@ class BafangUartMotorSettingsView extends React.Component<
                     <FloatButton
                         icon={<SyncOutlined />}
                         type="primary"
-                        style={{ right: 24 }}
+                        style={{ right: 24, bottom: 94 }}
                         onClick={() => {
                         connection.loadData();
                         message.open({
@@ -1455,7 +1455,7 @@ class BafangUartMotorSettingsView extends React.Component<
                         <FloatButton
                             icon={<DeliveredProcedureOutlined />}
                             type="primary"
-                            style={{ right: 94 }}
+                            style={{ right: 24, bottom: 24 }}
                         />
                     </Popconfirm>
                 </Tooltip>
