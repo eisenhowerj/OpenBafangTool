@@ -43,20 +43,6 @@ This directory contains GitHub Actions workflows for automated building, testing
 - macOS: Apple Developer ID signing and notarization
 - Linux: Standard AppImage (no signing available)
 
-### 4. `nightly.yml` - Nightly Development Builds
-**Triggers:** Daily at 2 AM UTC, Manual dispatch
-
-**Purpose:** 
-- Creates automated nightly builds for testing latest changes
-- Only builds if there were commits in the last 24 hours
-- Helps with continuous testing of development changes
-
-**What it does:**
-- Checks for recent commits
-- Builds development versions with nightly version numbers
-- Creates pre-release with recent changes listed
-- Automatically cleans up old nightly releases
-
 ### 5. `pr-validation.yml` - Pull Request Validation
 **Triggers:** Pull request events (opened, synchronized, reopened)
 
@@ -71,20 +57,6 @@ This directory contains GitHub Actions workflows for automated building, testing
 - Performs security checks
 - Comments on PR with build summary and bundle size info
 
-### 6. `security.yml` - Security & Dependency Monitoring
-**Triggers:** Weekly schedule, Manual dispatch, Dependency file changes
-
-**Purpose:** 
-- Monitors project for security vulnerabilities
-- Tracks dependency updates and license compliance
-- Analyzes bundle size trends
-
-**What it does:**
-- Runs npm security audit
-- Checks for outdated packages
-- Validates license compatibility
-- Analyzes bundle sizes
-- Creates weekly summary issues
 
 ## Usage
 
