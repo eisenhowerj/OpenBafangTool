@@ -293,7 +293,7 @@ class BafangUartMotorSettingsView extends React.Component<
                 label: (
                     <>
                         {i18n.t('wheel_diameter')}
-                        <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, becauseit will lead to incorrect speed measurement">
+                        <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement">
                             <ExclamationCircleOutlined 
                                 style={{ 
                                     color: 'red', 
@@ -317,19 +317,37 @@ class BafangUartMotorSettingsView extends React.Component<
                     />
                 ),
             },
-            generateAnnotatedEditableNumberListItemWithWarning(
-                'Number of speed meter magnets on wheel',
-                this.state.magnets_per_wheel_rotation,
-                'Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring',
-                1,
-                1,
-                (magnets_per_wheel_rotation) =>
-                    this.setState({ magnets_per_wheel_rotation }),
-                'NEVER try to set wrong magnet number - it may be illegal, because it will lead to incorrect speed measurement',
-                '',
-                1,
-                10,
-            ),
+            {
+                key: 'magnets_per_wheel_rotation',
+                label: (
+                    <>
+                        Number of speed meter magnets on wheel
+                        <Tooltip title="NEVER try to set wrong magnet number - it may be illegal, because it will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.magnets_per_wheel_rotation}
+                        unit=""
+                        min={1}
+                        max={10}
+                        onNewValue={(magnets_per_wheel_rotation) =>
+                            this.setState({ magnets_per_wheel_rotation })
+                        }
+                        warningText="Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring"
+                        warningBelow={1}
+                        warningAbove={1}
+                    />
+                ),
+            },
             generateEditableSelectListItem(
                 'Speedmeter type',
                 SpeedmeterTypeOptions,
@@ -642,19 +660,37 @@ class BafangUartMotorSettingsView extends React.Component<
                 1,
                 100,
             ),
-            generateAnnotatedEditableNumberListItemWithWarning(
-                'Speed meter signals',
-                this.state.magnets_per_wheel_rotation,
-                'Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring',
-                1,
-                1,
-                (magnets_per_wheel_rotation) =>
-                    this.setState({ magnets_per_wheel_rotation }),
-                'NEVER try to set wrong magnet number - its illegal, because it will lead to incorrect speed measurement',
-                '',
-                1,
-                10,
-            ),
+            {
+                key: 'speed_meter_signals',
+                label: (
+                    <>
+                        Speed meter signals
+                        <Tooltip title="NEVER try to set wrong magnet number - its illegal, because it will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.magnets_per_wheel_rotation}
+                        unit=""
+                        min={1}
+                        max={10}
+                        onNewValue={(magnets_per_wheel_rotation) =>
+                            this.setState({ magnets_per_wheel_rotation })
+                        }
+                        warningText="Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring"
+                        warningBelow={1}
+                        warningAbove={1}
+                    />
+                ),
+            },
             generateEditableSelectListItem(
                 'Speedmeter type',
                 SpeedmeterTypeOptions,
