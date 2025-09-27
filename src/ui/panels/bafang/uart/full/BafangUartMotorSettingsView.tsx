@@ -12,7 +12,6 @@ import {
     Button,
     Dropdown,
 } from 'antd';
-import Menu from 'antd/lib/menu';
 import type { DescriptionsProps } from 'antd';
 import { SyncOutlined, DeliveredProcedureOutlined } from '@ant-design/icons';
 import BafangUartMotor from '../../../../../device/high-level/BafangUartMotor';
@@ -991,16 +990,14 @@ class BafangUartMotorSettingsView extends React.Component<
     render() {
         const { connection } = this.props;
         const { oldStyle } = this.state;
-        const presetMenu = (
-            <Menu
-                onClick={({ key }) => this.handlePresetSelect(key)}
-                selectedKeys={[this.state.selectedPreset]}
-            >
-                {this.state.presetFiles.map((file) => (
-                    <Menu.Item key={file}>{path.basename(file)}</Menu.Item>
-                ))}
-            </Menu>
-        );
+        const presetMenuItems = {
+            onClick: ({ key }: { key: string }) => this.handlePresetSelect(key),
+            selectedKeys: [this.state.selectedPreset],
+            items: this.state.presetFiles.map((file) => ({
+                key: file,
+                label: path.basename(file),
+            })),
+        };
         return (
             <div style={{ margin: '36px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1026,7 +1023,7 @@ class BafangUartMotorSettingsView extends React.Component<
                             label: 'Preset Management',
                             children: (
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Dropdown overlay={presetMenu} trigger={['click']}>
+                                    <Dropdown menu={presetMenuItems} trigger={['click']}>
                                         <Button>
                                             {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select Preset'}
                                         </Button>
