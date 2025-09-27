@@ -1201,30 +1201,6 @@ class BafangUartMotorSettingsView extends React.Component<
                 </div>
                 <Descriptions
                     bordered
-                    title="Presets"
-                    column={1}
-                    style={{ marginBottom: '20px' }}
-                    items={[
-                        {
-                            key: 'shipped_presets',
-                            label: 'Shipped Presets',
-                            children: (
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Dropdown menu={presetMenuItems} trigger={['click']}>
-                                        <Button>
-                                            {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select Shipped Preset'}
-                                        </Button>
-                                    </Dropdown>
-                                    <Button onClick={this.handlePresetLoadFromDropdown} disabled={!this.state.selectedPreset}>
-                                        Load Preset
-                                    </Button>
-                                </div>
-                            ),
-                        },
-                    ]}
-                />
-                <Descriptions
-                    bordered
                     title="Files"
                     column={1}
                     style={{ marginBottom: '20px' }}
@@ -1239,6 +1215,22 @@ class BafangUartMotorSettingsView extends React.Component<
                                     </Button>
                                     <Button onClick={this.handlePresetSave}>
                                         Save to File...
+                                    </Button>
+                                </div>
+                            ),
+                        },
+                        {
+                            key: 'shipped_presets',
+                            label: 'Presets',
+                            children: (
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <Dropdown menu={presetMenuItems} trigger={['click']}>
+                                        <Button>
+                                            {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select'}
+                                        </Button>
+                                    </Dropdown>
+                                    <Button onClick={this.handlePresetLoadFromDropdown} disabled={!this.state.selectedPreset}>
+                                        Load Preset
                                     </Button>
                                 </div>
                             ),
