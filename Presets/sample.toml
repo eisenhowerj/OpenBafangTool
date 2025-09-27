@@ -1,0 +1,52 @@
+[metadata]
+name = "Sample Motor Configuration"
+description = "A balanced configuration suitable for general riding conditions with moderate power and good efficiency."
+author = "OpenBafangTool Team"
+
+[Basic]
+LBP = 41
+LC = 30
+ALC0 = 1
+ALC1 = 20
+ALC2 = 30
+ALC3 = 40
+ALC4 = 50
+ALC5 = 60
+ALC6 = 70
+ALC7 = 80
+ALC8 = 90
+ALC9 = 100
+ALBP0 = 1
+ALBP1 = 85
+ALBP2 = 85
+ALBP3 = 90
+ALBP4 = 95
+ALBP5 = 96
+ALBP6 = 100
+ALBP7 = 100
+ALBP8 = 100
+ALBP9 = 100
+WD = 10
+SMM = 0
+SMS = 1
+
+[Pedal_Assist]
+PT = 2
+DA = 0
+SL = 0
+SSM = 2
+WM = 0
+SC = 10
+SDN = 10
+TS = 20
+CD = 8
+SD = 0
+KC = 60
+
+[Throttle_Handle]
+SV = 11
+EV = 35
+MODE = 1
+DA = 10
+SL = 0
+SC = 10

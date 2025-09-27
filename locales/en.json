@@ -203,7 +203,7 @@
     "interface_type": "Interface type",
     "serial_port": "Serial port",
     "usb_device": "USB device",
-    "select": "Select",
+    "select": "Go",
     "check_connection": "Check connection",
     "law_disclaimer_text_1": "I checked local laws and regulations and",
     "law_disclaimer_text_2": "will not use this program to violate them",

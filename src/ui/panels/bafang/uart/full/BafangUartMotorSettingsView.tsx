@@ -1,4 +1,6 @@
 import React from 'react';
+import path from 'path';
+import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject, SettingsMetadata } from '../../../../../utils/settingsLoader';
 import {
     Typography,
     Descriptions,
@@ -7,9 +9,12 @@ import {
     message,
     Switch,
     Popconfirm,
+    Button,
+    Dropdown,
+    Tooltip,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
-import { SyncOutlined, DeliveredProcedureOutlined } from '@ant-design/icons';
+import { SyncOutlined, DeliveredProcedureOutlined, ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import BafangUartMotor from '../../../../../device/high-level/BafangUartMotor';
 import {
     AssistLevel,
@@ -29,6 +34,7 @@ import {
 } from '../../../../../types/BafangUartMotorTypes';
 import { lowVoltageLimits } from '../../../../../constants/parameter_limits';
 import ParameterInputComponent from '../../../../components/ParameterInput';
+import StringValueComponent from '../../../../components/StringValueComponent';
 import {
     generateAnnotatedEditableNumberListItem,
     generateAnnotatedEditableNumberListItemWithWarning,
@@ -54,6 +60,10 @@ type SettingsState = BafangUartMotorInfo &
         throttle_speed_limit_unit: string;
         lastUpdateTime: number;
         oldStyle: boolean;
+        presetFiles: string[];
+        selectedPreset: string;
+        presetMetadata: Map<string, SettingsMetadata>;
+        selectedPresetInfo: { description?: string; author?: string; } | null;
     };
 
 /* eslint-disable camelcase */
@@ -71,6 +81,8 @@ class BafangUartMotorSettingsView extends React.Component<
 
     private packages_written: number;
 
+    presetsDir = path.join(process.cwd(), 'Presets');
+
     constructor(props: SettingsProps) {
         super(props);
         const { connection } = this.props;
@@ -79,39 +91,286 @@ class BafangUartMotorSettingsView extends React.Component<
         this.initial_pedal_parameters = connection.getPedalParameters();
         this.initial_throttle_parameters = connection.getThrottleParameters();
         this.packages_written = 0;
-        this.state = {
-            ...this.initial_info,
-            ...this.initial_basic_parameters,
-            ...this.initial_pedal_parameters,
-            ...this.initial_throttle_parameters,
-            pedal_speed_limit_unit:
-                this.initial_pedal_parameters.pedal_speed_limit ===
-                SpeedLimitByDisplay
-                    ? 'by_display'
-                    : 'kmh',
-            throttle_speed_limit_unit:
-                this.initial_throttle_parameters.throttle_speed_limit ===
-                SpeedLimitByDisplay
-                    ? 'by_display'
-                    : 'kmh',
-            lastUpdateTime: 0,
-            oldStyle: false,
-        };
-        this.getElectricalParameterItems =
-            this.getElectricalParameterItems.bind(this);
-        this.getPhysicalParameterItems =
-            this.getPhysicalParameterItems.bind(this);
+        this.getElectricalParameterItems = this.getElectricalParameterItems.bind(this);
+        this.getPhysicalParameterItems = this.getPhysicalParameterItems.bind(this);
         this.getDriveParameterItems = this.getDriveParameterItems.bind(this);
         this.getOtherItems = this.getOtherItems.bind(this);
         this.saveParameters = this.saveParameters.bind(this);
         this.updateData = this.updateData.bind(this);
         this.onWriteSuccess = this.onWriteSuccess.bind(this);
         this.onWriteError = this.onWriteError.bind(this);
+        this.handlePresetSelect = this.handlePresetSelect.bind(this);
+        this.handlePresetLoadFromDropdown = this.handlePresetLoadFromDropdown.bind(this);
+        this.handlePresetLoadFromFile = this.handlePresetLoadFromFile.bind(this);
+        this.handlePresetSave = this.handlePresetSave.bind(this);
+        this.state = {
+            ...this.initial_info,
+            ...this.initial_basic_parameters,
+            ...this.initial_pedal_parameters,
+            ...this.initial_throttle_parameters,
+            pedal_speed_limit_unit:
+                this.initial_pedal_parameters.pedal_speed_limit === SpeedLimitByDisplay ? 'by_display' : 'kmh',
+            throttle_speed_limit_unit:
+                this.initial_throttle_parameters.throttle_speed_limit === SpeedLimitByDisplay ? 'by_display' : 'kmh',
+            lastUpdateTime: 0,
+            oldStyle: false,
+            presetFiles: this.getInitialPresetFiles(),
+            selectedPreset: '',
+            presetMetadata: new Map(),
+            selectedPresetInfo: null,
+        };
         connection.emitter.removeAllListeners('write-success');
         connection.emitter.removeAllListeners('write-error');
         connection.emitter.on('data', this.updateData);
         connection.emitter.on('write-success', this.onWriteSuccess);
         connection.emitter.on('write-error', this.onWriteError);
+    }
+
+    getInitialPresetFiles(): string[] {
+        try {
+            return listPresetFiles(this.presetsDir);
+        } catch (err) {
+            console.warn('Failed to load preset files:', err);
+            return [];
+        }
+    }
+
+    loadPresetMetadata(): void {
+        const metadataMap = new Map();
+        this.state.presetFiles.forEach(filePath => {
+            try {
+                const settings = loadSettingsFile(filePath);
+                if (settings.metadata) {
+                    metadataMap.set(filePath, settings.metadata);
+                }
+            } catch (err) {
+                console.warn(`Failed to load metadata for ${filePath}:`, err);
+            }
+        });
+        this.setState({ presetMetadata: metadataMap });
+    }
+
+    componentDidMount(): void {
+        this.loadPresetMetadata();
+    }
+
+    parseTxtSettings(content: string): SettingsObject {
+        const lines = content.split(/\r?\n/);
+        const result: SettingsObject = {};
+        let currentSection = '';
+        for (const line of lines) {
+            if (line.trim().startsWith('[') && line.trim().endsWith(']')) {
+                currentSection = line.trim().slice(1, -1);
+                result[currentSection] = {};
+            } else if (line.includes('=') && currentSection && result[currentSection]) {
+                const [key, value] = line.split('=', 2);
+                const numValue = Number(value.trim());
+                if (!isNaN(numValue)) {
+                    (result[currentSection] as Record<string, number>)[key.trim()] = numValue;
+                } else {
+                    console.warn(`Invalid number for key "${key.trim()}" in section "[${currentSection}]": "${value.trim()}"`);
+                }
+            }
+        }
+        return result;
+    }
+
+    handlePresetSelect(preset: string): void {
+        const metadata = this.state.presetMetadata.get(preset);
+        const selectedPresetInfo = metadata ? {
+            description: metadata.description,
+            author: metadata.author,
+        } : null;
+        this.setState({ 
+            selectedPreset: preset,
+            selectedPresetInfo: selectedPresetInfo 
+        });
+    }
+
+    handlePresetLoadFromDropdown(): void {
+        const { selectedPreset } = this.state;
+        if (!selectedPreset) return;
+        try {
+            const settings: SettingsObject = loadSettingsFile(selectedPreset);
+            const basic = (settings.Basic || {}) as Record<string, number>;
+            const pedal = ((settings['Pedal Assist'] || settings.Pedal_Assist) || {}) as Record<string, number>;
+            const throttle = ((settings['Throttle Handle'] || settings.Throttle_Handle) || {}) as Record<string, number>;
+            this.setState({
+                low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
+                current_limit: basic.LC ?? this.state.current_limit,
+                wheel_diameter: basic.WD ?? this.state.wheel_diameter,
+                magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
+                speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
+                pedal_type: pedal.PT ?? this.state.pedal_type,
+                pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
+                pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
+                throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
+                throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
+                throttle_mode: throttle.MODE ?? this.state.throttle_mode,
+            });
+            // Show metadata information if available
+            if (settings.metadata) {
+                const meta = settings.metadata;
+                const metaInfo = [];
+                if (meta.name) metaInfo.push(`Name: ${meta.name}`);
+                if (meta.description) metaInfo.push(`Description: ${meta.description}`);
+                if (meta.version) metaInfo.push(`Version: ${meta.version}`);
+                if (meta.author) metaInfo.push(`Author: ${meta.author}`);
+                if (meta.created) metaInfo.push(`Created: ${meta.created}`);
+                
+                if (metaInfo.length > 0) {
+                    message.success(`Preset loaded: ${path.basename(selectedPreset)}\n${metaInfo.join(' | ')}`, 5);
+                } else {
+                    message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+                }
+            } else {
+                message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+            }
+        } catch (e: any) {
+            // Log the error for debugging
+            // eslint-disable-next-line no-console
+            console.error('Error loading preset:', e);
+            message.error(`Failed to load preset: ${e.message || e}`);
+        }
+    }
+
+    handlePresetLoadFromFile(): void {
+        // Create a hidden file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.toml,.txt';
+        input.style.display = 'none';
+        
+        input.onchange = (event: Event) => {
+            const target = event.target as HTMLInputElement;
+            const file = target.files?.[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target?.result as string;
+                    // Create a temporary file path for compatibility with loadSettingsFile
+                    const tempFilePath = file.name;
+                    
+                    // Parse the content directly instead of using loadSettingsFile
+                    let settings: SettingsObject;
+                    try {
+                        const toml = require('@iarna/toml');
+                        settings = toml.parse(content) as SettingsObject;
+                    } catch (e) {
+                        // Fallback: parse TXT format
+                        settings = this.parseTxtSettings(content);
+                    }
+                    
+                    const basic = (settings.Basic || {}) as Record<string, number>;
+                    const pedal = ((settings['Pedal Assist'] || settings.Pedal_Assist) || {}) as Record<string, number>;
+                    const throttle = ((settings['Throttle Handle'] || settings.Throttle_Handle) || {}) as Record<string, number>;
+                    
+                    this.setState({
+                        low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
+                        current_limit: basic.LC ?? this.state.current_limit,
+                        wheel_diameter: basic.WD ?? this.state.wheel_diameter,
+                        magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
+                        speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
+                        pedal_type: pedal.PT ?? this.state.pedal_type,
+                        pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
+                        pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
+                        throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
+                        throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
+                        throttle_mode: throttle.MODE ?? this.state.throttle_mode,
+                    });
+                    
+                    // Show metadata information if available
+                    if (settings.metadata) {
+                        const meta = settings.metadata;
+                        const metaInfo = [];
+                        if (meta.name) metaInfo.push(`Name: ${meta.name}`);
+                        if (meta.description) metaInfo.push(`Description: ${meta.description}`);
+                        if (meta.version) metaInfo.push(`Version: ${meta.version}`);
+                        if (meta.author) metaInfo.push(`Author: ${meta.author}`);
+                        if (meta.created) metaInfo.push(`Created: ${meta.created}`);
+                        
+                        if (metaInfo.length > 0) {
+                            message.success(`Preset loaded: ${file.name}\n${metaInfo.join(' | ')}`, 5);
+                        } else {
+                            message.success(`Preset loaded from: ${file.name}`);
+                        }
+                    } else {
+                        message.success(`Preset loaded from: ${file.name}`);
+                    }
+                } catch (e: any) {
+                    // eslint-disable-next-line no-console
+                    console.error('Error parsing preset:', e);
+                    message.error(`Failed to parse preset: ${e.message || e}`);
+                }
+            };
+            
+            reader.onerror = () => {
+                message.error('Failed to read file');
+            };
+            
+            reader.readAsText(file);
+            document.body.removeChild(input);
+        };
+        
+        document.body.appendChild(input);
+        input.click();
+    }
+
+    handlePresetSave(): void {
+        try {
+            const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+            const settings: SettingsObject = {
+                metadata: {
+                    name: "Custom Motor Configuration",
+                    description: "Custom configuration exported from OpenBafangTool",
+                    version: "1.0",
+                    author: "User",
+                    created: currentDate,
+                },
+                Basic: {
+                    LBP: this.state.low_battery_protection,
+                    LC: this.state.current_limit,
+                    WD: this.state.wheel_diameter,
+                    SMM: this.state.magnets_per_wheel_rotation,
+                    SMS: this.state.speedmeter_type,
+                },
+                'Pedal Assist': {
+                    PT: this.state.pedal_type,
+                    DA: this.state.pedal_assist_level,
+                    SL: this.state.pedal_speed_limit,
+                },
+                'Throttle Handle': {
+                    SV: this.state.throttle_start_voltage,
+                    EV: this.state.throttle_end_voltage,
+                    MODE: this.state.throttle_mode,
+                },
+            };
+            
+            // Convert to TOML format
+            const toml = require('@iarna/toml');
+            const tomlString = toml.stringify(settings);
+            
+            // Create and trigger download
+            const blob = new Blob([tomlString], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'motor-settings.toml';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            message.success('Preset saved to Downloads folder as motor-settings.toml');
+        } catch (e) {
+            // Log the error for debugging
+            // eslint-disable-next-line no-console
+            console.error('Failed to save preset:', e);
+            message.error(`Failed to save preset: ${e instanceof Error ? e.message : String(e)}`);
+        }
     }
 
     onWriteSuccess(pkg_code: string): void {
@@ -203,31 +462,66 @@ class BafangUartMotorSettingsView extends React.Component<
 
     getPhysicalParameterItems(): DescriptionsProps['items'] {
         return [
-            generateAnnotatedEditableNumberListItemWithWarning(
-                i18n.t('wheel_diameter'),
-                this.state.wheel_diameter,
-                i18n.t('wheel_diameter_warning'),
-                12,
-                29,
-                (wheel_diameter) => this.setState({ wheel_diameter }),
-                'NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement',
-                '″',
-                1,
-                100,
-            ),
-            generateAnnotatedEditableNumberListItemWithWarning(
-                'Number of speed meter magnets on wheel',
-                this.state.magnets_per_wheel_rotation,
-                'Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring',
-                1,
-                1,
-                (magnets_per_wheel_rotation) =>
-                    this.setState({ magnets_per_wheel_rotation }),
-                'NEVER try to set wrong magnet number - it may be illegal, because it will lead to incorrect speed measurement',
-                '',
-                1,
-                10,
-            ),
+            {
+                key: 'wheel_diameter',
+                label: (
+                    <>
+                        {i18n.t('wheel_diameter')}
+                        <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.wheel_diameter}
+                        unit="″"
+                        min={1}
+                        max={100}
+                        onNewValue={(wheel_diameter) => this.setState({ wheel_diameter })}
+                        warningText={i18n.t('wheel_diameter_warning')}
+                        warningBelow={12}
+                        warningAbove={29}
+                    />
+                ),
+            },
+            {
+                key: 'magnets_per_wheel_rotation',
+                label: (
+                    <>
+                        Number of speed meter magnets on wheel
+                        <Tooltip title="NEVER try to set wrong magnet number - it may be illegal, because it will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.magnets_per_wheel_rotation}
+                        unit=""
+                        min={1}
+                        max={10}
+                        onNewValue={(magnets_per_wheel_rotation) =>
+                            this.setState({ magnets_per_wheel_rotation })
+                        }
+                        warningText="Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring"
+                        warningBelow={1}
+                        warningAbove={1}
+                    />
+                ),
+            },
             generateEditableSelectListItem(
                 'Speedmeter type',
                 SpeedmeterTypeOptions,
@@ -471,11 +765,25 @@ class BafangUartMotorSettingsView extends React.Component<
 
     getOtherItems(): DescriptionsProps['items'] {
         return [
-            generateSimpleStringListItem(
-                i18n.t('serial_number'),
-                this.state.serial_number,
-                i18n.t('serial_number_warning'),
-            ),
+            {
+                key: 'serial_number',
+                label: (
+                    <>
+                        {i18n.t('serial_number')}
+                        <Tooltip title={i18n.t('serial_number_warning')}>
+                            <InfoCircleOutlined 
+                                style={{ 
+                                    color: '#1890ff', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: <StringValueComponent value={this.state.serial_number} />,
+                contentStyle: { width: '50%' },
+            },
         ];
     }
 
@@ -529,30 +837,66 @@ class BafangUartMotorSettingsView extends React.Component<
                 1,
                 this.state.max_current,
             ),
-            generateEditableNumberListItemWithWarning(
-                i18n.t('wheel_diameter'),
-                this.state.wheel_diameter,
-                i18n.t('wheel_diameter_warning'),
-                12,
-                29,
-                (wheel_diameter) => this.setState({ wheel_diameter }),
-                '″',
-                1,
-                100,
-            ),
-            generateAnnotatedEditableNumberListItemWithWarning(
-                'Speed meter signals',
-                this.state.magnets_per_wheel_rotation,
-                'Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring',
-                1,
-                1,
-                (magnets_per_wheel_rotation) =>
-                    this.setState({ magnets_per_wheel_rotation }),
-                'NEVER try to set wrong magnet number - its illegal, because it will lead to incorrect speed measurement',
-                '',
-                1,
-                10,
-            ),
+            {
+                key: 'wheel_diameter_basic',
+                label: (
+                    <>
+                        {i18n.t('wheel_diameter')}
+                        <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.wheel_diameter}
+                        unit="″"
+                        min={1}
+                        max={100}
+                        onNewValue={(wheel_diameter) => this.setState({ wheel_diameter })}
+                        warningText={i18n.t('wheel_diameter_warning')}
+                        warningBelow={12}
+                        warningAbove={29}
+                    />
+                ),
+            },
+            {
+                key: 'speed_meter_signals',
+                label: (
+                    <>
+                        Speed meter signals
+                        <Tooltip title="NEVER try to set wrong magnet number - its illegal, because it will lead to incorrect speed measurement">
+                            <ExclamationCircleOutlined 
+                                style={{ 
+                                    color: 'red', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: (
+                    <ParameterInputComponent
+                        value={this.state.magnets_per_wheel_rotation}
+                        unit=""
+                        min={1}
+                        max={10}
+                        onNewValue={(magnets_per_wheel_rotation) =>
+                            this.setState({ magnets_per_wheel_rotation })
+                        }
+                        warningText="Normally bike have only one speed meter magnet. Incorrect value of this setting will lead to incorrect speed measuring"
+                        warningBelow={1}
+                        warningAbove={1}
+                    />
+                ),
+            },
             generateEditableSelectListItem(
                 'Speedmeter type',
                 SpeedmeterTypeOptions,
@@ -906,20 +1250,90 @@ class BafangUartMotorSettingsView extends React.Component<
     render() {
         const { connection } = this.props;
         const { oldStyle } = this.state;
+        const presetMenuItems = {
+            onClick: ({ key }: { key: string }) => this.handlePresetSelect(key),
+            selectedKeys: [this.state.selectedPreset],
+            items: this.state.presetFiles.map((file) => {
+                const metadata = this.state.presetMetadata.get(file);
+                const displayName = metadata?.name || path.basename(file);
+                return {
+                    key: file,
+                    label: displayName,
+                };
+            }),
+        };
         return (
             <div style={{ margin: '36px' }}>
-                <Typography.Title level={2} style={{ margin: 0 }}>
-                    {i18n.t('uart_motor_parameters_title')}
-                </Typography.Title>
-                <br />
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                    {i18n.t('old_style_layout')}&nbsp;&nbsp;
-                    <Switch
-                        checked={oldStyle}
-                        onChange={(value) => this.setState({ oldStyle: value })}
-                    />
-                </Typography.Title>
-                <br />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <Typography.Title level={2} style={{ margin: 0 }}>
+                        {i18n.t('uart_motor_parameters_title')}
+                    </Typography.Title>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Typography.Text>{i18n.t('old_style_layout')}</Typography.Text>
+                        <Switch
+                            checked={oldStyle}
+                            onChange={(value) => this.setState({ oldStyle: value })}
+                        />
+                    </div>
+                </div>
+                <Descriptions
+                    bordered
+                    title="Files"
+                    column={1}
+                    style={{ marginBottom: '20px' }}
+                    items={[
+                        {
+                            key: 'file_operations',
+                            label: 'Operations',
+                            children: (
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <Button onClick={this.handlePresetLoadFromFile}>
+                                        Load from File...
+                                    </Button>
+                                    <Button onClick={this.handlePresetSave}>
+                                        Save to File...
+                                    </Button>
+                                </div>
+                            ),
+                        },
+                        {
+                            key: 'shipped_presets',
+                            label: 'Presets',
+                            children: (
+                                <div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: this.state.selectedPresetInfo ? '8px' : '0' }}>
+                                        <Dropdown menu={presetMenuItems} trigger={['click']}>
+                                            <Button>
+                                                {(() => {
+                                                    if (!this.state.selectedPreset) return 'Select';
+                                                    const metadata = this.state.presetMetadata.get(this.state.selectedPreset);
+                                                    return metadata?.name || path.basename(this.state.selectedPreset);
+                                                })()}
+                                            </Button>
+                                        </Dropdown>
+                                        <Button onClick={this.handlePresetLoadFromDropdown} disabled={!this.state.selectedPreset}>
+                                            Load Preset
+                                        </Button>
+                                    </div>
+                                    {this.state.selectedPresetInfo && (
+                                        <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                                            {this.state.selectedPresetInfo.description && (
+                                                <div style={{ marginBottom: '4px' }}>
+                                                    <strong>Description:</strong> {this.state.selectedPresetInfo.description}
+                                                </div>
+                                            )}
+                                            {this.state.selectedPresetInfo.author && (
+                                                <div>
+                                                    <strong>Author:</strong> {this.state.selectedPresetInfo.author}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ),
+                        },
+                    ]}
+                />
                 {!oldStyle && (
                     <>
                         <Descriptions
@@ -997,11 +1411,12 @@ class BafangUartMotorSettingsView extends React.Component<
                         />
                     </>
                 )}
-                <FloatButton
-                    icon={<SyncOutlined />}
-                    type="primary"
-                    style={{ right: 94 }}
-                    onClick={() => {
+                <Tooltip title="Read current parameters from the motor controller" placement="left">
+                    <FloatButton
+                        icon={<SyncOutlined />}
+                        type="primary"
+                        style={{ right: 24, bottom: 94 }}
+                        onClick={() => {
                         connection.loadData();
                         message.open({
                             key: 'loading',
@@ -1028,19 +1443,22 @@ class BafangUartMotorSettingsView extends React.Component<
                         }, 3000);
                     }}
                 />
-                <Popconfirm
-                    title={i18n.t('parameter_writing_title')}
-                    description={i18n.t('parameter_writing_confirm')}
-                    onConfirm={this.saveParameters}
-                    okText={i18n.t('yes')}
-                    cancelText={i18n.t('no')}
-                >
-                    <FloatButton
-                        icon={<DeliveredProcedureOutlined />}
-                        type="primary"
-                        style={{ right: 24 }}
-                    />
-                </Popconfirm>
+                </Tooltip>
+                <Tooltip title="Write all current parameters to the motor controller" placement="left">
+                    <Popconfirm
+                        title={i18n.t('parameter_writing_title')}
+                        description={i18n.t('parameter_writing_confirm')}
+                        onConfirm={this.saveParameters}
+                        okText={i18n.t('yes')}
+                        cancelText={i18n.t('no')}
+                    >
+                        <FloatButton
+                            icon={<DeliveredProcedureOutlined />}
+                            type="primary"
+                            style={{ right: 24, bottom: 24 }}
+                        />
+                    </Popconfirm>
+                </Tooltip>
             </div>
         );
     }

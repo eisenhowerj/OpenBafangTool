@@ -1,0 +1,52 @@
+[metadata]
+name = "High Performance Configuration"
+description = "Optimized for maximum power and performance on mountain trails with higher assist levels and current limits."
+author = "MTB Enthusiast"
+
+[Basic]
+LBP = 45
+LC = 35
+ALC0 = 5
+ALC1 = 25
+ALC2 = 35
+ALC3 = 50
+ALC4 = 65
+ALC5 = 75
+ALC6 = 85
+ALC7 = 90
+ALC8 = 95
+ALC9 = 100
+ALBP0 = 5
+ALBP1 = 88
+ALBP2 = 88
+ALBP3 = 92
+ALBP4 = 96
+ALBP5 = 98
+ALBP6 = 100
+ALBP7 = 100
+ALBP8 = 100
+ALBP9 = 100
+WD = 12
+SMM = 0
+SMS = 1
+
+[Pedal_Assist]
+PT = 2
+DA = 0
+SL = 0
+SSM = 2
+WM = 0
+SC = 12
+SDN = 12
+TS = 25
+CD = 10
+SD = 0
+KC = 70
+
+[Throttle_Handle]
+SV = 12
+EV = 38
+MODE = 1
+DA = 15
+SL = 0
+SC = 12

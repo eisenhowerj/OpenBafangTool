@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags (e.g., v1.0.0, v2.1.0-rc)
+  workflow_dispatch:  # Allows manual triggering
+
+permissions:
+  contents: write  # Needed to create releases and upload assets
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: macos-latest
+            platform: mac
+            arch: universal
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install system dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install app dependencies
+        run: |
+          cd release/app
+          npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build Electron app
+        run: npm run package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # Disable code signing for now (can be enabled later)
+
+      - name: List build output
+        run: ls -la release/build/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release/build/
+          retention-days: 5
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: find artifacts -type f
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION=${{ github.ref_name }}
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          
+          # Generate basic release notes
+          cat > release_notes.md << EOF
+          ## OpenBafangTool ${VERSION}
+          
+          ### Downloads
+          - **Windows**: OpenBafangTool-Setup-${VERSION}-win-x64.exe
+          - **macOS**: OpenBafangTool-${VERSION}-mac-universal.dmg  
+          - **Linux**: OpenBafangTool-${VERSION}-linux-x64.AppImage
+          
+          ### Changes
+          Please see the commit history for detailed changes in this release.
+          
+          ### Installation
+          1. Download the appropriate file for your operating system
+          2. For Windows: Run the .exe installer
+          3. For macOS: Open the .dmg file and drag the app to Applications
+          4. For Linux: Make the .AppImage executable and run it
+          
+          ### System Requirements
+          - Node.js runtime is included in the packaged applications
+          - USB access for device communication
+          EOF
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: OpenBafangTool ${{ github.ref_name }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          files: |
+            artifacts/release-win-x64/*
+            artifacts/release-mac-universal/*
+            artifacts/release-linux-x64/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
