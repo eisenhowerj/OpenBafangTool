@@ -1411,11 +1411,12 @@ class BafangUartMotorSettingsView extends React.Component<
                         />
                     </>
                 )}
-                <FloatButton
-                    icon={<SyncOutlined />}
-                    type="primary"
-                    style={{ right: 94 }}
-                    onClick={() => {
+                <Tooltip title="Read current parameters from the motor controller" placement="left">
+                    <FloatButton
+                        icon={<SyncOutlined />}
+                        type="primary"
+                        style={{ right: 94 }}
+                        onClick={() => {
                         connection.loadData();
                         message.open({
                             key: 'loading',
@@ -1442,19 +1443,22 @@ class BafangUartMotorSettingsView extends React.Component<
                         }, 3000);
                     }}
                 />
-                <Popconfirm
-                    title={i18n.t('parameter_writing_title')}
-                    description={i18n.t('parameter_writing_confirm')}
-                    onConfirm={this.saveParameters}
-                    okText={i18n.t('yes')}
-                    cancelText={i18n.t('no')}
-                >
-                    <FloatButton
-                        icon={<DeliveredProcedureOutlined />}
-                        type="primary"
-                        style={{ right: 24 }}
-                    />
-                </Popconfirm>
+                </Tooltip>
+                <Tooltip title="Write all current parameters to the motor controller" placement="left">
+                    <Popconfirm
+                        title={i18n.t('parameter_writing_title')}
+                        description={i18n.t('parameter_writing_confirm')}
+                        onConfirm={this.saveParameters}
+                        okText={i18n.t('yes')}
+                        cancelText={i18n.t('no')}
+                    >
+                        <FloatButton
+                            icon={<DeliveredProcedureOutlined />}
+                            type="primary"
+                            style={{ right: 24 }}
+                        />
+                    </Popconfirm>
+                </Tooltip>
             </div>
         );
     }
