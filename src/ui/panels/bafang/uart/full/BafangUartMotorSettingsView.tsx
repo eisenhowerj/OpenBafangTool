@@ -131,6 +131,27 @@ class BafangUartMotorSettingsView extends React.Component<
         }
     }
 
+    parseTxtSettings(content: string): SettingsObject {
+        const lines = content.split(/\r?\n/);
+        const result: SettingsObject = {};
+        let currentSection = '';
+        for (const line of lines) {
+            if (line.trim().startsWith('[') && line.trim().endsWith(']')) {
+                currentSection = line.trim().slice(1, -1);
+                result[currentSection] = {};
+            } else if (line.includes('=') && currentSection) {
+                const [key, value] = line.split('=', 2);
+                const numValue = Number(value.trim());
+                if (!isNaN(numValue)) {
+                    result[currentSection][key.trim()] = numValue;
+                } else {
+                    console.warn(`Invalid number for key "${key.trim()}" in section "[${currentSection}]": "${value.trim()}"`);
+                }
+            }
+        }
+        return result;
+    }
+
     handlePresetSelect(preset: string): void {
         this.setState({ selectedPreset: preset });
     }
@@ -165,69 +186,75 @@ class BafangUartMotorSettingsView extends React.Component<
         }
     }
 
-    async handlePresetLoadFromFile(): Promise<void> {
-        try {
-            const { dialog } = require('electron');
-            const result = await dialog.showOpenDialog({
-                title: 'Load Preset File',
-                filters: [
-                    { name: 'TOML Files', extensions: ['toml'] },
-                    { name: 'Text Files', extensions: ['txt'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ],
-                properties: ['openFile']
-            });
-
-            if (result.canceled || !result.filePaths.length) {
-                return;
-            }
-
-            const filePath = result.filePaths[0];
-            const settings: SettingsObject = loadSettingsFile(filePath);
-            const basic = settings.Basic || {};
-            const pedal = settings['Pedal Assist'] || settings.Pedal_Assist || {};
-            const throttle = settings['Throttle Handle'] || settings.Throttle_Handle || {};
+    handlePresetLoadFromFile(): void {
+        // Create a hidden file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.toml,.txt';
+        input.style.display = 'none';
+        
+        input.onchange = (event: Event) => {
+            const target = event.target as HTMLInputElement;
+            const file = target.files?.[0];
+            if (!file) return;
             
-            this.setState({
-                low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
-                current_limit: basic.LC ?? this.state.current_limit,
-                wheel_diameter: basic.WD ?? this.state.wheel_diameter,
-                magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
-                speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
-                pedal_type: pedal.PT ?? this.state.pedal_type,
-                pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
-                pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
-                throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
-                throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
-                throttle_mode: throttle.MODE ?? this.state.throttle_mode,
-            });
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target?.result as string;
+                    // Create a temporary file path for compatibility with loadSettingsFile
+                    const tempFilePath = file.name;
+                    
+                    // Parse the content directly instead of using loadSettingsFile
+                    let settings: SettingsObject;
+                    try {
+                        const toml = require('@iarna/toml');
+                        settings = toml.parse(content) as SettingsObject;
+                    } catch (e) {
+                        // Fallback: parse TXT format
+                        settings = this.parseTxtSettings(content);
+                    }
+                    
+                    const basic = settings.Basic || {};
+                    const pedal = settings['Pedal Assist'] || settings.Pedal_Assist || {};
+                    const throttle = settings['Throttle Handle'] || settings.Throttle_Handle || {};
+                    
+                    this.setState({
+                        low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
+                        current_limit: basic.LC ?? this.state.current_limit,
+                        wheel_diameter: basic.WD ?? this.state.wheel_diameter,
+                        magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
+                        speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
+                        pedal_type: pedal.PT ?? this.state.pedal_type,
+                        pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
+                        pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
+                        throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
+                        throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
+                        throttle_mode: throttle.MODE ?? this.state.throttle_mode,
+                    });
+                    
+                    message.success(`Preset loaded from: ${file.name}`);
+                } catch (e: any) {
+                    // eslint-disable-next-line no-console
+                    console.error('Error parsing preset:', e);
+                    message.error(`Failed to parse preset: ${e.message || e}`);
+                }
+            };
             
-            message.success(`Preset loaded from: ${path.basename(filePath)}`);
-        } catch (e: any) {
-            // Log the error for debugging
-            // eslint-disable-next-line no-console
-            console.error('Error loading preset:', e);
-            message.error(`Failed to load preset: ${e.message || e}`);
-        }
+            reader.onerror = () => {
+                message.error('Failed to read file');
+            };
+            
+            reader.readAsText(file);
+            document.body.removeChild(input);
+        };
+        
+        document.body.appendChild(input);
+        input.click();
     }
 
-    async handlePresetSave(): Promise<void> {
+    handlePresetSave(): void {
         try {
-            const { dialog } = require('electron');
-            const result = await dialog.showSaveDialog({
-                title: 'Save Preset File',
-                defaultPath: 'motor-settings.toml',
-                filters: [
-                    { name: 'TOML Files', extensions: ['toml'] },
-                    { name: 'Text Files', extensions: ['txt'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-
-            if (result.canceled || !result.filePath) {
-                return;
-            }
-
             const settings: SettingsObject = {
                 Basic: {
                     LBP: this.state.low_battery_protection,
@@ -248,8 +275,23 @@ class BafangUartMotorSettingsView extends React.Component<
                 },
             };
             
-            saveSettingsFile(result.filePath, settings);
-            message.success(`Preset saved to: ${path.basename(result.filePath)}`);
+            // Convert to TOML format
+            const toml = require('@iarna/toml');
+            const tomlString = toml.stringify(settings);
+            
+            // Create and trigger download
+            const blob = new Blob([tomlString], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'motor-settings.toml';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            message.success('Preset saved to Downloads folder as motor-settings.toml');
         } catch (e) {
             // Log the error for debugging
             // eslint-disable-next-line no-console
