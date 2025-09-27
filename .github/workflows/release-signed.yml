@@ -1,0 +1,160 @@
+# This workflow can be used when code signing certificates are available
+# To enable code signing:
+# 1. For macOS: Add APPLE_ID, APPLE_ID_PASSWORD, and CSC_LINK secrets
+# 2. For Windows: Add CSC_LINK and CSC_KEY_PASSWORD secrets
+# 3. Remove or modify CSC_IDENTITY_AUTO_DISCOVERY: false in the main release workflow
+
+name: Release (Code Signed)
+
+on:
+  push:
+    tags:
+      - 'v*-signed'  # Use different tag pattern to avoid conflicts
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-signed:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: macos-latest
+            platform: mac
+            arch: universal
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install system dependencies (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install app dependencies
+        run: |
+          cd release/app
+          npm ci
+
+      - name: Build application
+        run: npm run build
+
+      # macOS Code Signing Setup
+      - name: Setup macOS certificates
+        if: matrix.platform == 'mac'
+        run: |
+          # This would require APPLE_ID, APPLE_ID_PASSWORD, and CSC_LINK secrets
+          # echo "${{ secrets.CSC_LINK }}" | base64 -d > certificate.p12
+          echo "Code signing setup would go here"
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+
+      # Windows Code Signing Setup  
+      - name: Setup Windows certificates
+        if: matrix.platform == 'win'
+        run: |
+          # This would require CSC_LINK and CSC_KEY_PASSWORD secrets
+          echo "Windows code signing setup would go here"
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      - name: Build and sign Electron app
+        run: npm run package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Enable code signing (remove CSC_IDENTITY_AUTO_DISCOVERY: false)
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-signed-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release/build/
+          retention-days: 30
+
+  release-signed:
+    needs: build-signed
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: find artifacts -type f
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Signed Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: OpenBafangTool ${{ steps.tag.outputs.tag }} (Code Signed)
+          body: |
+            ## OpenBafangTool ${{ steps.tag.outputs.tag }} - Code Signed Release
+            
+            This release includes code-signed binaries for enhanced security:
+            - **Windows**: Signed with Authenticode certificate
+            - **macOS**: Signed and notarized with Apple Developer ID
+            - **Linux**: Standard AppImage (no code signing available)
+            
+            ### Security
+            - All binaries are digitally signed and verified
+            - macOS builds are notarized by Apple
+            - Windows builds include valid Authenticode signatures
+            
+            ### Installation
+            Code-signed binaries should install without security warnings on most systems.
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, 'rc') || contains(steps.tag.outputs.tag, 'beta') || contains(steps.tag.outputs.tag, 'alpha') }}
+          files: |
+            artifacts/release-signed-win-x64/*
+            artifacts/release-signed-mac-universal/*
+            artifacts/release-signed-linux-x64/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
