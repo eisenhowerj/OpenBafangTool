@@ -1021,6 +1021,7 @@ class BafangUartMotorSettingsView extends React.Component<
                 </div>
                 <br />
                 <Typography.Title level={5} style={{ margin: 0 }}>
+                    {i18n.t('old_style_layout')}{' '}
                     <Switch
                         checked={oldStyle}
                         onChange={(value) => this.setState({ oldStyle: value })}
