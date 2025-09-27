@@ -1003,31 +1003,45 @@ class BafangUartMotorSettingsView extends React.Component<
         );
         return (
             <div style={{ margin: '36px' }}>
-                <Typography.Title level={2} style={{ margin: 0 }}>
-                    {i18n.t('uart_motor_parameters_title')}
-                </Typography.Title>
-                <div style={{ marginBottom: 16 }}>
-                    <Dropdown overlay={presetMenu} trigger={['click']}>
-                        <Button>
-                            {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select Preset'}
-                        </Button>
-                    </Dropdown>
-                    <Button style={{ marginLeft: 8 }} onClick={this.handlePresetLoad} disabled={!this.state.selectedPreset}>
-                        Load
-                    </Button>
-                    <Button style={{ marginLeft: 8 }} onClick={this.handlePresetSave} disabled={!this.state.selectedPreset}>
-                        Save
-                    </Button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <Typography.Title level={2} style={{ margin: 0 }}>
+                        {i18n.t('uart_motor_parameters_title')}
+                    </Typography.Title>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Typography.Text>{i18n.t('old_style_layout')}</Typography.Text>
+                        <Switch
+                            checked={oldStyle}
+                            onChange={(value) => this.setState({ oldStyle: value })}
+                        />
+                    </div>
                 </div>
-                <br />
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                    {i18n.t('old_style_layout')}{' '}
-                    <Switch
-                        checked={oldStyle}
-                        onChange={(value) => this.setState({ oldStyle: value })}
-                    />
-                </Typography.Title>
-                <br />
+                <Descriptions
+                    bordered
+                    title="Files"
+                    column={1}
+                    style={{ marginBottom: '20px' }}
+                    items={[
+                        {
+                            key: 'preset_controls',
+                            label: 'Preset Management',
+                            children: (
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <Dropdown overlay={presetMenu} trigger={['click']}>
+                                        <Button>
+                                            {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select Preset'}
+                                        </Button>
+                                    </Dropdown>
+                                    <Button onClick={this.handlePresetLoad} disabled={!this.state.selectedPreset}>
+                                        Load
+                                    </Button>
+                                    <Button onClick={this.handlePresetSave} disabled={!this.state.selectedPreset}>
+                                        Save
+                                    </Button>
+                                </div>
+                            ),
+                        },
+                    ]}
+                />
                 {!oldStyle && (
                     <>
                         <Descriptions
