@@ -1,6 +1,5 @@
 import React from 'react';
 import path from 'path';
-import { dialog } from 'electron';
 import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
 import {
     Typography,
@@ -168,6 +167,7 @@ class BafangUartMotorSettingsView extends React.Component<
 
     async handlePresetLoadFromFile(): Promise<void> {
         try {
+            const { dialog } = require('electron');
             const result = await dialog.showOpenDialog({
                 title: 'Load Preset File',
                 filters: [
@@ -213,6 +213,7 @@ class BafangUartMotorSettingsView extends React.Component<
 
     async handlePresetSave(): Promise<void> {
         try {
+            const { dialog } = require('electron');
             const result = await dialog.showSaveDialog({
                 title: 'Save Preset File',
                 defaultPath: 'motor-settings.toml',
