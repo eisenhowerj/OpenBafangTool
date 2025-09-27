@@ -1,6 +1,7 @@
 import React from 'react';
 import path from 'path';
-import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
+import { dialog } from 'electron';
+import { loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
 import {
     Typography,
     Descriptions,
@@ -10,7 +11,6 @@ import {
     Switch,
     Popconfirm,
     Button,
-    Dropdown,
     Tooltip,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
@@ -121,30 +121,34 @@ class BafangUartMotorSettingsView extends React.Component<
         connection.emitter.on('write-error', this.onWriteError);
     }
 
-    componentDidMount(): void {
-        this.setState({ presetFiles: this.getPresetFiles() });
-    }
-
-    getPresetFiles(): string[] {
-        try {
-            return listPresetFiles(this.presetsDir);
-        } catch (err) {
-            return [];
-        }
-    }
+    
 
     handlePresetSelect(preset: string): void {
         this.setState({ selectedPreset: preset });
     }
 
-    handlePresetLoad(): void {
-        const { selectedPreset } = this.state;
-        if (!selectedPreset) return;
+    async handlePresetLoad(): Promise<void> {
         try {
-            const settings: SettingsObject = loadSettingsFile(selectedPreset);
+            const result = await dialog.showOpenDialog({
+                title: 'Load Preset File',
+                filters: [
+                    { name: 'TOML Files', extensions: ['toml'] },
+                    { name: 'Text Files', extensions: ['txt'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ],
+                properties: ['openFile']
+            });
+
+            if (result.canceled || !result.filePaths.length) {
+                return;
+            }
+
+            const filePath = result.filePaths[0];
+            const settings: SettingsObject = loadSettingsFile(filePath);
             const basic = settings.Basic || {};
             const pedal = settings['Pedal Assist'] || settings.Pedal_Assist || {};
             const throttle = settings['Throttle Handle'] || settings.Throttle_Handle || {};
+            
             this.setState({
                 low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
                 current_limit: basic.LC ?? this.state.current_limit,
@@ -158,7 +162,8 @@ class BafangUartMotorSettingsView extends React.Component<
                 throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
                 throttle_mode: throttle.MODE ?? this.state.throttle_mode,
             });
-            message.success('Preset loaded!');
+            
+            message.success(`Preset loaded from: ${path.basename(filePath)}`);
         } catch (e: any) {
             // Log the error for debugging
             // eslint-disable-next-line no-console
@@ -167,10 +172,22 @@ class BafangUartMotorSettingsView extends React.Component<
         }
     }
 
-    handlePresetSave(): void {
-        const { selectedPreset } = this.state;
-        if (!selectedPreset) return;
+    async handlePresetSave(): Promise<void> {
         try {
+            const result = await dialog.showSaveDialog({
+                title: 'Save Preset File',
+                defaultPath: 'motor-settings.toml',
+                filters: [
+                    { name: 'TOML Files', extensions: ['toml'] },
+                    { name: 'Text Files', extensions: ['txt'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]
+            });
+
+            if (result.canceled || !result.filePath) {
+                return;
+            }
+
             const settings: SettingsObject = {
                 Basic: {
                     LBP: this.state.low_battery_protection,
@@ -190,8 +207,9 @@ class BafangUartMotorSettingsView extends React.Component<
                     MODE: this.state.throttle_mode,
                 },
             };
-            saveSettingsFile(selectedPreset, settings);
-            message.success('Preset saved!');
+            
+            saveSettingsFile(result.filePath, settings);
+            message.success(`Preset saved to: ${path.basename(result.filePath)}`);
         } catch (e) {
             // Log the error for debugging
             // eslint-disable-next-line no-console
@@ -1077,14 +1095,6 @@ class BafangUartMotorSettingsView extends React.Component<
     render() {
         const { connection } = this.props;
         const { oldStyle } = this.state;
-        const presetMenuItems = {
-            onClick: ({ key }: { key: string }) => this.handlePresetSelect(key),
-            selectedKeys: [this.state.selectedPreset],
-            items: this.state.presetFiles.map((file) => ({
-                key: file,
-                label: path.basename(file),
-            })),
-        };
         return (
             <div style={{ margin: '36px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1110,16 +1120,11 @@ class BafangUartMotorSettingsView extends React.Component<
                             label: 'Preset Management',
                             children: (
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Dropdown menu={presetMenuItems} trigger={['click']}>
-                                        <Button>
-                                            {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select Preset'}
-                                        </Button>
-                                    </Dropdown>
-                                    <Button onClick={this.handlePresetLoad} disabled={!this.state.selectedPreset}>
-                                        Load
+                                    <Button onClick={this.handlePresetLoad} type="primary">
+                                        Load from File...
                                     </Button>
-                                    <Button onClick={this.handlePresetSave} disabled={!this.state.selectedPreset}>
-                                        Save
+                                    <Button onClick={this.handlePresetSave}>
+                                        Save to File...
                                     </Button>
                                 </div>
                             ),
