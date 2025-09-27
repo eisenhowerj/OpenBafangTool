@@ -1,7 +1,7 @@
 import React from 'react';
 import path from 'path';
 import { dialog } from 'electron';
-import { loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
+import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject } from '../../../../../utils/settingsLoader';
 import {
     Typography,
     Descriptions,
@@ -11,6 +11,7 @@ import {
     Switch,
     Popconfirm,
     Button,
+    Dropdown,
     Tooltip,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
@@ -98,7 +99,8 @@ class BafangUartMotorSettingsView extends React.Component<
         this.onWriteSuccess = this.onWriteSuccess.bind(this);
         this.onWriteError = this.onWriteError.bind(this);
         this.handlePresetSelect = this.handlePresetSelect.bind(this);
-        this.handlePresetLoad = this.handlePresetLoad.bind(this);
+        this.handlePresetLoadFromDropdown = this.handlePresetLoadFromDropdown.bind(this);
+        this.handlePresetLoadFromFile = this.handlePresetLoadFromFile.bind(this);
         this.handlePresetSave = this.handlePresetSave.bind(this);
         this.state = {
             ...this.initial_info,
@@ -121,13 +123,53 @@ class BafangUartMotorSettingsView extends React.Component<
         connection.emitter.on('write-error', this.onWriteError);
     }
 
-    
+    componentDidMount() {
+        this.setState({ presetFiles: this.getPresetFiles() });
+    }
+
+    getPresetFiles(): string[] {
+        try {
+            return listPresetFiles(this.presetsDir);
+        } catch (err) {
+            return [];
+        }
+    }
 
     handlePresetSelect(preset: string): void {
         this.setState({ selectedPreset: preset });
     }
 
-    async handlePresetLoad(): Promise<void> {
+    handlePresetLoadFromDropdown(): void {
+        const { selectedPreset } = this.state;
+        if (!selectedPreset) return;
+        try {
+            const settings: SettingsObject = loadSettingsFile(selectedPreset);
+            const basic = settings.Basic || {};
+            const pedal = settings['Pedal Assist'] || settings.Pedal_Assist || {};
+            const throttle = settings['Throttle Handle'] || settings.Throttle_Handle || {};
+            this.setState({
+                low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
+                current_limit: basic.LC ?? this.state.current_limit,
+                wheel_diameter: basic.WD ?? this.state.wheel_diameter,
+                magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
+                speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
+                pedal_type: pedal.PT ?? this.state.pedal_type,
+                pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
+                pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
+                throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
+                throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
+                throttle_mode: throttle.MODE ?? this.state.throttle_mode,
+            });
+            message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+        } catch (e: any) {
+            // Log the error for debugging
+            // eslint-disable-next-line no-console
+            console.error('Error loading preset:', e);
+            message.error(`Failed to load preset: ${e.message || e}`);
+        }
+    }
+
+    async handlePresetLoadFromFile(): Promise<void> {
         try {
             const result = await dialog.showOpenDialog({
                 title: 'Load Preset File',
@@ -1095,6 +1137,14 @@ class BafangUartMotorSettingsView extends React.Component<
     render() {
         const { connection } = this.props;
         const { oldStyle } = this.state;
+        const presetMenuItems = {
+            onClick: ({ key }: { key: string }) => this.handlePresetSelect(key),
+            selectedKeys: [this.state.selectedPreset],
+            items: this.state.presetFiles.map((file) => ({
+                key: file,
+                label: path.basename(file),
+            })),
+        };
         return (
             <div style={{ margin: '36px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1119,13 +1169,25 @@ class BafangUartMotorSettingsView extends React.Component<
                             key: 'preset_controls',
                             label: 'Preset Management',
                             children: (
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Button onClick={this.handlePresetLoad} type="primary">
-                                        Load from File...
-                                    </Button>
-                                    <Button onClick={this.handlePresetSave}>
-                                        Save to File...
-                                    </Button>
+                                <div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
+                                        <Dropdown menu={presetMenuItems} trigger={['click']}>
+                                            <Button>
+                                                {this.state.selectedPreset ? path.basename(this.state.selectedPreset) : 'Select Shipped Preset'}
+                                            </Button>
+                                        </Dropdown>
+                                        <Button onClick={this.handlePresetLoadFromDropdown} disabled={!this.state.selectedPreset}>
+                                            Load Preset
+                                        </Button>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <Button onClick={this.handlePresetLoadFromFile} type="primary">
+                                            Load from File...
+                                        </Button>
+                                        <Button onClick={this.handlePresetSave}>
+                                            Save to File...
+                                        </Button>
+                                    </div>
                                 </div>
                             ),
                         },
