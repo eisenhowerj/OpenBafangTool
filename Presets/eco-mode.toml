@@ -1,0 +1,54 @@
+[metadata]
+name = "Eco-Friendly Mode"
+description = "Energy-efficient configuration designed for maximum range and battery conservation on commuter rides."
+version = "1.0"
+author = "Commuter Pro"
+created = "2025-09-27"
+
+[Basic]
+LBP = 38
+LC = 20
+ALC0 = 1
+ALC1 = 10
+ALC2 = 18
+ALC3 = 25
+ALC4 = 32
+ALC5 = 40
+ALC6 = 50
+ALC7 = 60
+ALC8 = 75
+ALC9 = 85
+ALBP0 = 1
+ALBP1 = 80
+ALBP2 = 82
+ALBP3 = 85
+ALBP4 = 88
+ALBP5 = 90
+ALBP6 = 95
+ALBP7 = 98
+ALBP8 = 100
+ALBP9 = 100
+WD = 8
+SMM = 0
+SMS = 1
+
+[Pedal_Assist]
+PT = 2
+DA = 0
+SL = 0
+SSM = 2
+WM = 0
+SC = 8
+SDN = 8
+TS = 15
+CD = 6
+SD = 0
+KC = 45
+
+[Throttle_Handle]
+SV = 10
+EV = 32
+MODE = 1
+DA = 8
+SL = 0
+SC = 8

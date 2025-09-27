@@ -1,3 +1,10 @@
+[metadata]
+name = "Sample Motor Configuration"
+description = "A balanced configuration suitable for general riding conditions with moderate power and good efficiency."
+version = "1.0"
+author = "OpenBafangTool Team"
+created = "2025-09-27"
+
 [Basic]
 LBP = 41
 LC = 30

@@ -139,11 +139,11 @@ class BafangUartMotorSettingsView extends React.Component<
             if (line.trim().startsWith('[') && line.trim().endsWith(']')) {
                 currentSection = line.trim().slice(1, -1);
                 result[currentSection] = {};
-            } else if (line.includes('=') && currentSection) {
+            } else if (line.includes('=') && currentSection && result[currentSection]) {
                 const [key, value] = line.split('=', 2);
                 const numValue = Number(value.trim());
                 if (!isNaN(numValue)) {
-                    result[currentSection][key.trim()] = numValue;
+                    (result[currentSection] as Record<string, number>)[key.trim()] = numValue;
                 } else {
                     console.warn(`Invalid number for key "${key.trim()}" in section "[${currentSection}]": "${value.trim()}"`);
                 }
@@ -161,9 +161,9 @@ class BafangUartMotorSettingsView extends React.Component<
         if (!selectedPreset) return;
         try {
             const settings: SettingsObject = loadSettingsFile(selectedPreset);
-            const basic = settings.Basic || {};
-            const pedal = settings['Pedal Assist'] || settings.Pedal_Assist || {};
-            const throttle = settings['Throttle Handle'] || settings.Throttle_Handle || {};
+            const basic = (settings.Basic || {}) as Record<string, number>;
+            const pedal = ((settings['Pedal Assist'] || settings.Pedal_Assist) || {}) as Record<string, number>;
+            const throttle = ((settings['Throttle Handle'] || settings.Throttle_Handle) || {}) as Record<string, number>;
             this.setState({
                 low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
                 current_limit: basic.LC ?? this.state.current_limit,
@@ -177,7 +177,24 @@ class BafangUartMotorSettingsView extends React.Component<
                 throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
                 throttle_mode: throttle.MODE ?? this.state.throttle_mode,
             });
-            message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+            // Show metadata information if available
+            if (settings.metadata) {
+                const meta = settings.metadata;
+                const metaInfo = [];
+                if (meta.name) metaInfo.push(`Name: ${meta.name}`);
+                if (meta.description) metaInfo.push(`Description: ${meta.description}`);
+                if (meta.version) metaInfo.push(`Version: ${meta.version}`);
+                if (meta.author) metaInfo.push(`Author: ${meta.author}`);
+                if (meta.created) metaInfo.push(`Created: ${meta.created}`);
+                
+                if (metaInfo.length > 0) {
+                    message.success(`Preset loaded: ${path.basename(selectedPreset)}\n${metaInfo.join(' | ')}`, 5);
+                } else {
+                    message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+                }
+            } else {
+                message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+            }
         } catch (e: any) {
             // Log the error for debugging
             // eslint-disable-next-line no-console
@@ -215,9 +232,9 @@ class BafangUartMotorSettingsView extends React.Component<
                         settings = this.parseTxtSettings(content);
                     }
                     
-                    const basic = settings.Basic || {};
-                    const pedal = settings['Pedal Assist'] || settings.Pedal_Assist || {};
-                    const throttle = settings['Throttle Handle'] || settings.Throttle_Handle || {};
+                    const basic = (settings.Basic || {}) as Record<string, number>;
+                    const pedal = ((settings['Pedal Assist'] || settings.Pedal_Assist) || {}) as Record<string, number>;
+                    const throttle = ((settings['Throttle Handle'] || settings.Throttle_Handle) || {}) as Record<string, number>;
                     
                     this.setState({
                         low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
@@ -233,7 +250,24 @@ class BafangUartMotorSettingsView extends React.Component<
                         throttle_mode: throttle.MODE ?? this.state.throttle_mode,
                     });
                     
-                    message.success(`Preset loaded from: ${file.name}`);
+                    // Show metadata information if available
+                    if (settings.metadata) {
+                        const meta = settings.metadata;
+                        const metaInfo = [];
+                        if (meta.name) metaInfo.push(`Name: ${meta.name}`);
+                        if (meta.description) metaInfo.push(`Description: ${meta.description}`);
+                        if (meta.version) metaInfo.push(`Version: ${meta.version}`);
+                        if (meta.author) metaInfo.push(`Author: ${meta.author}`);
+                        if (meta.created) metaInfo.push(`Created: ${meta.created}`);
+                        
+                        if (metaInfo.length > 0) {
+                            message.success(`Preset loaded: ${file.name}\n${metaInfo.join(' | ')}`, 5);
+                        } else {
+                            message.success(`Preset loaded from: ${file.name}`);
+                        }
+                    } else {
+                        message.success(`Preset loaded from: ${file.name}`);
+                    }
                 } catch (e: any) {
                     // eslint-disable-next-line no-console
                     console.error('Error parsing preset:', e);
@@ -255,7 +289,15 @@ class BafangUartMotorSettingsView extends React.Component<
 
     handlePresetSave(): void {
         try {
+            const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
             const settings: SettingsObject = {
+                metadata: {
+                    name: "Custom Motor Configuration",
+                    description: "Custom configuration exported from OpenBafangTool",
+                    version: "1.0",
+                    author: "User",
+                    created: currentDate,
+                },
                 Basic: {
                     LBP: this.state.low_battery_protection,
                     LC: this.state.current_limit,
