@@ -14,7 +14,7 @@ import {
     Tooltip,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
-import { SyncOutlined, DeliveredProcedureOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { SyncOutlined, DeliveredProcedureOutlined, ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import BafangUartMotor from '../../../../../device/high-level/BafangUartMotor';
 import {
     AssistLevel,
@@ -34,6 +34,7 @@ import {
 } from '../../../../../types/BafangUartMotorTypes';
 import { lowVoltageLimits } from '../../../../../constants/parameter_limits';
 import ParameterInputComponent from '../../../../components/ParameterInput';
+import StringValueComponent from '../../../../components/StringValueComponent';
 import {
     generateAnnotatedEditableNumberListItem,
     generateAnnotatedEditableNumberListItemWithWarning,
@@ -591,11 +592,25 @@ class BafangUartMotorSettingsView extends React.Component<
 
     getOtherItems(): DescriptionsProps['items'] {
         return [
-            generateSimpleStringListItem(
-                i18n.t('serial_number'),
-                this.state.serial_number,
-                i18n.t('serial_number_warning'),
-            ),
+            {
+                key: 'serial_number',
+                label: (
+                    <>
+                        {i18n.t('serial_number')}
+                        <Tooltip title={i18n.t('serial_number_warning')}>
+                            <InfoCircleOutlined 
+                                style={{ 
+                                    color: '#1890ff', 
+                                    marginLeft: '8px', 
+                                    cursor: 'pointer' 
+                                }} 
+                            />
+                        </Tooltip>
+                    </>
+                ),
+                children: <StringValueComponent value={this.state.serial_number} />,
+                contentStyle: { width: '50%' },
+            },
         ];
     }
 
