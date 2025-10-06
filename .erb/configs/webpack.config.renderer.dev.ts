@@ -83,14 +83,14 @@ const configuration: webpack.Configuration = {
             {
                 test: /\.s?css$/,
                 use: [
-                    'style-loader', 
-                    'css-loader', 
+                    'style-loader',
+                    'css-loader',
                     {
                         loader: 'sass-loader',
                         options: {
                             api: 'modern',
                         },
-                    }
+                    },
                 ],
                 exclude: /\.module\.s?(c|a)ss$/,
             },

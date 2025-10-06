@@ -1,4 +1,6 @@
 import { deepCopy } from 'deep-copy-ts';
+import EventEmitter from 'events';
+import log from 'electron-log/renderer';
 import {
     BafangCanBatteryCapacityData,
     BafangCanBatteryStateData,
@@ -13,10 +15,8 @@ import {
     getBatteryStateDemoData,
 } from '../../../utils/can/demo_object_provider';
 import BesstDevice from '../../besst/besst';
-import EventEmitter from 'events';
 import { RequestManager } from '../../../utils/can/RequestManager';
 import { BesstReadedCanFrame, DeviceNetworkId } from '../../besst/besst-types';
-import log from 'electron-log/renderer';
 import { readParameter, rereadParameter } from '../../../utils/can/utils';
 import { charsToString } from '../../../utils/utils';
 import { CanReadCommandsList } from '../../../constants/BafangCanConstants';
@@ -162,8 +162,8 @@ export default class BafangCanBattery {
             CanReadCommandsList.CellsVoltage2,
             CanReadCommandsList.CellsVoltage3,
         ];
-        let readedSuccessfully = 0,
-            readedNonSuccessfully = 0;
+        let readedSuccessfully = 0;
+        let readedNonSuccessfully = 0;
 
         commands.forEach((command) => {
             new Promise<boolean>((resolve, reject) => {

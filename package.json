@@ -230,9 +230,9 @@
       "./docs/**"
     ]
   },
-  "devEngines": {
-    "node": ">=14.x",
-    "npm": ">=7.x"
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "electronmon": {
     "patterns": [

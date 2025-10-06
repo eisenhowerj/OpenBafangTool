@@ -124,9 +124,9 @@ export default class BafangCanSystem implements IConnection {
     public loadData(): void {
         if (this.readingInProgress) return;
         this.readingInProgress = true;
-        let readedSuccessfully = 0,
-            readedUnsuccessfully = 0,
-            readedDevices = 0;
+        let readedSuccessfully = 0;
+        const readedUnsuccessfully = 0;
+        let readedDevices = 0;
         const onReadFinish = (successful: number, nonsucessful: number) => {
             readedSuccessfully += successful;
             readedUnsuccessfully + nonsucessful;

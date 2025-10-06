@@ -392,14 +392,26 @@ class BafangCanSystemInfoView extends React.Component<InfoProps, InfoState> {
                     i18n.t('total_assist_levels_number'),
                     i18n.t('parameter_not_available_yet'),
                 ),
-                generateSimpleStringListItem(i18n.t('mode'), i18n.t('parameter_not_available_yet')),
-                generateSimpleStringListItem(i18n.t('boost'), i18n.t('parameter_not_available_yet')),
+                generateSimpleStringListItem(
+                    i18n.t('mode'),
+                    i18n.t('parameter_not_available_yet'),
+                ),
+                generateSimpleStringListItem(
+                    i18n.t('boost'),
+                    i18n.t('parameter_not_available_yet'),
+                ),
                 generateSimpleStringListItem(
                     i18n.t('current_assist_level'),
                     i18n.t('parameter_not_available_yet'),
                 ),
-                generateSimpleStringListItem(i18n.t('light'), i18n.t('parameter_not_available_yet')),
-                generateSimpleStringListItem(i18n.t('button_pressed'), i18n.t('parameter_not_available_yet')),
+                generateSimpleStringListItem(
+                    i18n.t('light'),
+                    i18n.t('parameter_not_available_yet'),
+                ),
+                generateSimpleStringListItem(
+                    i18n.t('button_pressed'),
+                    i18n.t('parameter_not_available_yet'),
+                ),
             ];
         }
         if (this.state.display_data1) {

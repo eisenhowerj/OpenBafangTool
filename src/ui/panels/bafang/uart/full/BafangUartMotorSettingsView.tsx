@@ -1,6 +1,5 @@
 import React from 'react';
 import path from 'path';
-import { listPresetFiles, loadSettingsFile, saveSettingsFile, SettingsObject, SettingsMetadata } from '../../../../../utils/settingsLoader';
 import {
     Typography,
     Descriptions,
@@ -14,7 +13,18 @@ import {
     Tooltip,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
-import { SyncOutlined, DeliveredProcedureOutlined, ExclamationCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import {
+    SyncOutlined,
+    DeliveredProcedureOutlined,
+    ExclamationCircleOutlined,
+    InfoCircleOutlined,
+} from '@ant-design/icons';
+import {
+    listPresetFiles,
+    loadSettingsFile,
+    SettingsObject,
+    SettingsMetadata,
+} from '../../../../../utils/settingsLoader';
 import BafangUartMotor from '../../../../../device/high-level/BafangUartMotor';
 import {
     AssistLevel,
@@ -36,8 +46,6 @@ import { lowVoltageLimits } from '../../../../../constants/parameter_limits';
 import ParameterInputComponent from '../../../../components/ParameterInput';
 import StringValueComponent from '../../../../components/StringValueComponent';
 import {
-    generateAnnotatedEditableNumberListItem,
-    generateAnnotatedEditableNumberListItemWithWarning,
     generateEditableNumberListItem,
     generateEditableNumberListItemWithWarning,
     generateEditableSelectListItem,
@@ -63,7 +71,7 @@ type SettingsState = BafangUartMotorInfo &
         presetFiles: string[];
         selectedPreset: string;
         presetMetadata: Map<string, SettingsMetadata>;
-        selectedPresetInfo: { description?: string; author?: string; } | null;
+        selectedPresetInfo: { description?: string; author?: string } | null;
     };
 
 /* eslint-disable camelcase */
@@ -91,8 +99,10 @@ class BafangUartMotorSettingsView extends React.Component<
         this.initial_pedal_parameters = connection.getPedalParameters();
         this.initial_throttle_parameters = connection.getThrottleParameters();
         this.packages_written = 0;
-        this.getElectricalParameterItems = this.getElectricalParameterItems.bind(this);
-        this.getPhysicalParameterItems = this.getPhysicalParameterItems.bind(this);
+        this.getElectricalParameterItems =
+            this.getElectricalParameterItems.bind(this);
+        this.getPhysicalParameterItems =
+            this.getPhysicalParameterItems.bind(this);
         this.getDriveParameterItems = this.getDriveParameterItems.bind(this);
         this.getOtherItems = this.getOtherItems.bind(this);
         this.saveParameters = this.saveParameters.bind(this);
@@ -100,8 +110,10 @@ class BafangUartMotorSettingsView extends React.Component<
         this.onWriteSuccess = this.onWriteSuccess.bind(this);
         this.onWriteError = this.onWriteError.bind(this);
         this.handlePresetSelect = this.handlePresetSelect.bind(this);
-        this.handlePresetLoadFromDropdown = this.handlePresetLoadFromDropdown.bind(this);
-        this.handlePresetLoadFromFile = this.handlePresetLoadFromFile.bind(this);
+        this.handlePresetLoadFromDropdown =
+            this.handlePresetLoadFromDropdown.bind(this);
+        this.handlePresetLoadFromFile =
+            this.handlePresetLoadFromFile.bind(this);
         this.handlePresetSave = this.handlePresetSave.bind(this);
         this.state = {
             ...this.initial_info,
@@ -109,9 +121,15 @@ class BafangUartMotorSettingsView extends React.Component<
             ...this.initial_pedal_parameters,
             ...this.initial_throttle_parameters,
             pedal_speed_limit_unit:
-                this.initial_pedal_parameters.pedal_speed_limit === SpeedLimitByDisplay ? 'by_display' : 'kmh',
+                this.initial_pedal_parameters.pedal_speed_limit ===
+                SpeedLimitByDisplay
+                    ? 'by_display'
+                    : 'kmh',
             throttle_speed_limit_unit:
-                this.initial_throttle_parameters.throttle_speed_limit === SpeedLimitByDisplay ? 'by_display' : 'kmh',
+                this.initial_throttle_parameters.throttle_speed_limit ===
+                SpeedLimitByDisplay
+                    ? 'by_display'
+                    : 'kmh',
             lastUpdateTime: 0,
             oldStyle: false,
             presetFiles: this.getInitialPresetFiles(),
@@ -137,7 +155,7 @@ class BafangUartMotorSettingsView extends React.Component<
 
     loadPresetMetadata(): void {
         const metadataMap = new Map();
-        this.state.presetFiles.forEach(filePath => {
+        this.state.presetFiles.forEach((filePath) => {
             try {
                 const settings = loadSettingsFile(filePath);
                 if (settings.metadata) {
@@ -162,13 +180,21 @@ class BafangUartMotorSettingsView extends React.Component<
             if (line.trim().startsWith('[') && line.trim().endsWith(']')) {
                 currentSection = line.trim().slice(1, -1);
                 result[currentSection] = {};
-            } else if (line.includes('=') && currentSection && result[currentSection]) {
+            } else if (
+                line.includes('=') &&
+                currentSection &&
+                result[currentSection]
+            ) {
                 const [key, value] = line.split('=', 2);
                 const numValue = Number(value.trim());
                 if (!isNaN(numValue)) {
-                    (result[currentSection] as Record<string, number>)[key.trim()] = numValue;
+                    (result[currentSection] as Record<string, number>)[
+                        key.trim()
+                    ] = numValue;
                 } else {
-                    console.warn(`Invalid number for key "${key.trim()}" in section "[${currentSection}]": "${value.trim()}"`);
+                    console.warn(
+                        `Invalid number for key "${key.trim()}" in section "[${currentSection}]": "${value.trim()}"`,
+                    );
                 }
             }
         }
@@ -177,13 +203,15 @@ class BafangUartMotorSettingsView extends React.Component<
 
     handlePresetSelect(preset: string): void {
         const metadata = this.state.presetMetadata.get(preset);
-        const selectedPresetInfo = metadata ? {
-            description: metadata.description,
-            author: metadata.author,
-        } : null;
-        this.setState({ 
+        const selectedPresetInfo = metadata
+            ? {
+                  description: metadata.description,
+                  author: metadata.author,
+              }
+            : null;
+        this.setState({
             selectedPreset: preset,
-            selectedPresetInfo: selectedPresetInfo 
+            selectedPresetInfo,
         });
     }
 
@@ -193,38 +221,54 @@ class BafangUartMotorSettingsView extends React.Component<
         try {
             const settings: SettingsObject = loadSettingsFile(selectedPreset);
             const basic = (settings.Basic || {}) as Record<string, number>;
-            const pedal = ((settings['Pedal Assist'] || settings.Pedal_Assist) || {}) as Record<string, number>;
-            const throttle = ((settings['Throttle Handle'] || settings.Throttle_Handle) || {}) as Record<string, number>;
-            this.setState({
-                low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
-                current_limit: basic.LC ?? this.state.current_limit,
-                wheel_diameter: basic.WD ?? this.state.wheel_diameter,
-                magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
-                speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
-                pedal_type: pedal.PT ?? this.state.pedal_type,
-                pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
-                pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
-                throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
-                throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
-                throttle_mode: throttle.MODE ?? this.state.throttle_mode,
-            });
+            const pedal = (settings['Pedal Assist'] ||
+                settings.Pedal_Assist ||
+                {}) as Record<string, number>;
+            const throttle = (settings['Throttle Handle'] ||
+                settings.Throttle_Handle ||
+                {}) as Record<string, number>;
+            this.setState((prevState) => ({
+                low_battery_protection:
+                    basic.LBP ?? prevState.low_battery_protection,
+                current_limit: basic.LC ?? prevState.current_limit,
+                wheel_diameter: basic.WD ?? prevState.wheel_diameter,
+                magnets_per_wheel_rotation:
+                    basic.SMM ?? prevState.magnets_per_wheel_rotation,
+                speedmeter_type: basic.SMS ?? prevState.speedmeter_type,
+                pedal_type: pedal.PT ?? prevState.pedal_type,
+                pedal_assist_level: pedal.DA ?? prevState.pedal_assist_level,
+                pedal_speed_limit: pedal.SL ?? prevState.pedal_speed_limit,
+                throttle_start_voltage:
+                    throttle.SV ?? prevState.throttle_start_voltage,
+                throttle_end_voltage:
+                    throttle.EV ?? prevState.throttle_end_voltage,
+                throttle_mode: throttle.MODE ?? prevState.throttle_mode,
+            }));
             // Show metadata information if available
             if (settings.metadata) {
                 const meta = settings.metadata;
                 const metaInfo = [];
                 if (meta.name) metaInfo.push(`Name: ${meta.name}`);
-                if (meta.description) metaInfo.push(`Description: ${meta.description}`);
+                if (meta.description)
+                    metaInfo.push(`Description: ${meta.description}`);
                 if (meta.version) metaInfo.push(`Version: ${meta.version}`);
                 if (meta.author) metaInfo.push(`Author: ${meta.author}`);
                 if (meta.created) metaInfo.push(`Created: ${meta.created}`);
-                
+
                 if (metaInfo.length > 0) {
-                    message.success(`Preset loaded: ${path.basename(selectedPreset)}\n${metaInfo.join(' | ')}`, 5);
+                    message.success(
+                        `Preset loaded: ${path.basename(selectedPreset)}\n${metaInfo.join(' | ')}`,
+                        5,
+                    );
                 } else {
-                    message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+                    message.success(
+                        `Preset loaded: ${path.basename(selectedPreset)}`,
+                    );
                 }
             } else {
-                message.success(`Preset loaded: ${path.basename(selectedPreset)}`);
+                message.success(
+                    `Preset loaded: ${path.basename(selectedPreset)}`,
+                );
             }
         } catch (e: any) {
             // Log the error for debugging
@@ -240,19 +284,18 @@ class BafangUartMotorSettingsView extends React.Component<
         input.type = 'file';
         input.accept = '.toml,.txt';
         input.style.display = 'none';
-        
+
         input.onchange = (event: Event) => {
             const target = event.target as HTMLInputElement;
             const file = target.files?.[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
                     const content = e.target?.result as string;
-                    // Create a temporary file path for compatibility with loadSettingsFile
-                    const tempFilePath = file.name;
-                    
+                    // No need to create a temporary file path since it's not used
+
                     // Parse the content directly instead of using loadSettingsFile
                     let settings: SettingsObject;
                     try {
@@ -262,37 +305,59 @@ class BafangUartMotorSettingsView extends React.Component<
                         // Fallback: parse TXT format
                         settings = this.parseTxtSettings(content);
                     }
-                    
-                    const basic = (settings.Basic || {}) as Record<string, number>;
-                    const pedal = ((settings['Pedal Assist'] || settings.Pedal_Assist) || {}) as Record<string, number>;
-                    const throttle = ((settings['Throttle Handle'] || settings.Throttle_Handle) || {}) as Record<string, number>;
-                    
+
+                    const basic = (settings.Basic || {}) as Record<
+                        string,
+                        number
+                    >;
+                    const pedal = (settings['Pedal Assist'] ||
+                        settings.Pedal_Assist ||
+                        {}) as Record<string, number>;
+                    const throttle = (settings['Throttle Handle'] ||
+                        settings.Throttle_Handle ||
+                        {}) as Record<string, number>;
+
                     this.setState({
-                        low_battery_protection: basic.LBP ?? this.state.low_battery_protection,
+                        low_battery_protection:
+                            basic.LBP ?? this.state.low_battery_protection,
                         current_limit: basic.LC ?? this.state.current_limit,
                         wheel_diameter: basic.WD ?? this.state.wheel_diameter,
-                        magnets_per_wheel_rotation: basic.SMM ?? this.state.magnets_per_wheel_rotation,
-                        speedmeter_type: basic.SMS ?? this.state.speedmeter_type,
+                        magnets_per_wheel_rotation:
+                            basic.SMM ?? this.state.magnets_per_wheel_rotation,
+                        speedmeter_type:
+                            basic.SMS ?? this.state.speedmeter_type,
                         pedal_type: pedal.PT ?? this.state.pedal_type,
-                        pedal_assist_level: pedal.DA ?? this.state.pedal_assist_level,
-                        pedal_speed_limit: pedal.SL ?? this.state.pedal_speed_limit,
-                        throttle_start_voltage: throttle.SV ?? this.state.throttle_start_voltage,
-                        throttle_end_voltage: throttle.EV ?? this.state.throttle_end_voltage,
-                        throttle_mode: throttle.MODE ?? this.state.throttle_mode,
+                        pedal_assist_level:
+                            pedal.DA ?? this.state.pedal_assist_level,
+                        pedal_speed_limit:
+                            pedal.SL ?? this.state.pedal_speed_limit,
+                        throttle_start_voltage:
+                            throttle.SV ?? this.state.throttle_start_voltage,
+                        throttle_end_voltage:
+                            throttle.EV ?? this.state.throttle_end_voltage,
+                        throttle_mode:
+                            throttle.MODE ?? this.state.throttle_mode,
                     });
-                    
+
                     // Show metadata information if available
                     if (settings.metadata) {
                         const meta = settings.metadata;
                         const metaInfo = [];
                         if (meta.name) metaInfo.push(`Name: ${meta.name}`);
-                        if (meta.description) metaInfo.push(`Description: ${meta.description}`);
-                        if (meta.version) metaInfo.push(`Version: ${meta.version}`);
-                        if (meta.author) metaInfo.push(`Author: ${meta.author}`);
-                        if (meta.created) metaInfo.push(`Created: ${meta.created}`);
-                        
+                        if (meta.description)
+                            metaInfo.push(`Description: ${meta.description}`);
+                        if (meta.version)
+                            metaInfo.push(`Version: ${meta.version}`);
+                        if (meta.author)
+                            metaInfo.push(`Author: ${meta.author}`);
+                        if (meta.created)
+                            metaInfo.push(`Created: ${meta.created}`);
+
                         if (metaInfo.length > 0) {
-                            message.success(`Preset loaded: ${file.name}\n${metaInfo.join(' | ')}`, 5);
+                            message.success(
+                                `Preset loaded: ${file.name}\n${metaInfo.join(' | ')}`,
+                                5,
+                            );
                         } else {
                             message.success(`Preset loaded from: ${file.name}`);
                         }
@@ -305,15 +370,15 @@ class BafangUartMotorSettingsView extends React.Component<
                     message.error(`Failed to parse preset: ${e.message || e}`);
                 }
             };
-            
+
             reader.onerror = () => {
                 message.error('Failed to read file');
             };
-            
+
             reader.readAsText(file);
             document.body.removeChild(input);
         };
-        
+
         document.body.appendChild(input);
         input.click();
     }
@@ -323,10 +388,11 @@ class BafangUartMotorSettingsView extends React.Component<
             const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
             const settings: SettingsObject = {
                 metadata: {
-                    name: "Custom Motor Configuration",
-                    description: "Custom configuration exported from OpenBafangTool",
-                    version: "1.0",
-                    author: "User",
+                    name: 'Custom Motor Configuration',
+                    description:
+                        'Custom configuration exported from OpenBafangTool',
+                    version: '1.0',
+                    author: 'User',
                     created: currentDate,
                 },
                 Basic: {
@@ -347,11 +413,11 @@ class BafangUartMotorSettingsView extends React.Component<
                     MODE: this.state.throttle_mode,
                 },
             };
-            
+
             // Convert to TOML format
             const toml = require('@iarna/toml');
             const tomlString = toml.stringify(settings);
-            
+
             // Create and trigger download
             const blob = new Blob([tomlString], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
@@ -363,13 +429,17 @@ class BafangUartMotorSettingsView extends React.Component<
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
-            message.success('Preset saved to Downloads folder as motor-settings.toml');
+
+            message.success(
+                'Preset saved to Downloads folder as motor-settings.toml',
+            );
         } catch (e) {
             // Log the error for debugging
             // eslint-disable-next-line no-console
             console.error('Failed to save preset:', e);
-            message.error(`Failed to save preset: ${e instanceof Error ? e.message : String(e)}`);
+            message.error(
+                `Failed to save preset: ${e instanceof Error ? e.message : String(e)}`,
+            );
         }
     }
 
@@ -468,12 +538,12 @@ class BafangUartMotorSettingsView extends React.Component<
                     <>
                         {i18n.t('wheel_diameter')}
                         <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement">
-                            <ExclamationCircleOutlined 
-                                style={{ 
-                                    color: 'red', 
-                                    marginLeft: '8px', 
-                                    cursor: 'pointer' 
-                                }} 
+                            <ExclamationCircleOutlined
+                                style={{
+                                    color: 'red',
+                                    marginLeft: '8px',
+                                    cursor: 'pointer',
+                                }}
                             />
                         </Tooltip>
                     </>
@@ -484,7 +554,9 @@ class BafangUartMotorSettingsView extends React.Component<
                         unit="″"
                         min={1}
                         max={100}
-                        onNewValue={(wheel_diameter) => this.setState({ wheel_diameter })}
+                        onNewValue={(wheel_diameter) =>
+                            this.setState({ wheel_diameter })
+                        }
                         warningText={i18n.t('wheel_diameter_warning')}
                         warningBelow={12}
                         warningAbove={29}
@@ -497,12 +569,12 @@ class BafangUartMotorSettingsView extends React.Component<
                     <>
                         Number of speed meter magnets on wheel
                         <Tooltip title="NEVER try to set wrong magnet number - it may be illegal, because it will lead to incorrect speed measurement">
-                            <ExclamationCircleOutlined 
-                                style={{ 
-                                    color: 'red', 
-                                    marginLeft: '8px', 
-                                    cursor: 'pointer' 
-                                }} 
+                            <ExclamationCircleOutlined
+                                style={{
+                                    color: 'red',
+                                    marginLeft: '8px',
+                                    cursor: 'pointer',
+                                }}
                             />
                         </Tooltip>
                     </>
@@ -771,17 +843,19 @@ class BafangUartMotorSettingsView extends React.Component<
                     <>
                         {i18n.t('serial_number')}
                         <Tooltip title={i18n.t('serial_number_warning')}>
-                            <InfoCircleOutlined 
-                                style={{ 
-                                    color: '#1890ff', 
-                                    marginLeft: '8px', 
-                                    cursor: 'pointer' 
-                                }} 
+                            <InfoCircleOutlined
+                                style={{
+                                    color: '#1890ff',
+                                    marginLeft: '8px',
+                                    cursor: 'pointer',
+                                }}
                             />
                         </Tooltip>
                     </>
                 ),
-                children: <StringValueComponent value={this.state.serial_number} />,
+                children: (
+                    <StringValueComponent value={this.state.serial_number} />
+                ),
                 contentStyle: { width: '50%' },
             },
         ];
@@ -843,12 +917,12 @@ class BafangUartMotorSettingsView extends React.Component<
                     <>
                         {i18n.t('wheel_diameter')}
                         <Tooltip title="NEVER try to set wrong wheel diameter - its illegal, because it will lead to incorrect speed measurement">
-                            <ExclamationCircleOutlined 
-                                style={{ 
-                                    color: 'red', 
-                                    marginLeft: '8px', 
-                                    cursor: 'pointer' 
-                                }} 
+                            <ExclamationCircleOutlined
+                                style={{
+                                    color: 'red',
+                                    marginLeft: '8px',
+                                    cursor: 'pointer',
+                                }}
                             />
                         </Tooltip>
                     </>
@@ -859,7 +933,9 @@ class BafangUartMotorSettingsView extends React.Component<
                         unit="″"
                         min={1}
                         max={100}
-                        onNewValue={(wheel_diameter) => this.setState({ wheel_diameter })}
+                        onNewValue={(wheel_diameter) =>
+                            this.setState({ wheel_diameter })
+                        }
                         warningText={i18n.t('wheel_diameter_warning')}
                         warningBelow={12}
                         warningAbove={29}
@@ -872,12 +948,12 @@ class BafangUartMotorSettingsView extends React.Component<
                     <>
                         Speed meter signals
                         <Tooltip title="NEVER try to set wrong magnet number - its illegal, because it will lead to incorrect speed measurement">
-                            <ExclamationCircleOutlined 
-                                style={{ 
-                                    color: 'red', 
-                                    marginLeft: '8px', 
-                                    cursor: 'pointer' 
-                                }} 
+                            <ExclamationCircleOutlined
+                                style={{
+                                    color: 'red',
+                                    marginLeft: '8px',
+                                    cursor: 'pointer',
+                                }}
                             />
                         </Tooltip>
                     </>
@@ -1264,15 +1340,32 @@ class BafangUartMotorSettingsView extends React.Component<
         };
         return (
             <div style={{ margin: '36px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '20px',
+                    }}
+                >
                     <Typography.Title level={2} style={{ margin: 0 }}>
                         {i18n.t('uart_motor_parameters_title')}
                     </Typography.Title>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Typography.Text>{i18n.t('old_style_layout')}</Typography.Text>
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}
+                    >
+                        <Typography.Text>
+                            {i18n.t('old_style_layout')}
+                        </Typography.Text>
                         <Switch
                             checked={oldStyle}
-                            onChange={(value) => this.setState({ oldStyle: value })}
+                            onChange={(value) =>
+                                this.setState({ oldStyle: value })
+                            }
                         />
                     </div>
                 </div>
@@ -1286,8 +1379,16 @@ class BafangUartMotorSettingsView extends React.Component<
                             key: 'file_operations',
                             label: 'Operations',
                             children: (
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Button onClick={this.handlePresetLoadFromFile}>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        gap: '8px',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <Button
+                                        onClick={this.handlePresetLoadFromFile}
+                                    >
                                         Load from File...
                                     </Button>
                                     <Button onClick={this.handlePresetSave}>
@@ -1301,30 +1402,89 @@ class BafangUartMotorSettingsView extends React.Component<
                             label: 'Presets',
                             children: (
                                 <div>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: this.state.selectedPresetInfo ? '8px' : '0' }}>
-                                        <Dropdown menu={presetMenuItems} trigger={['click']}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            gap: '8px',
+                                            alignItems: 'center',
+                                            marginBottom: this.state
+                                                .selectedPresetInfo
+                                                ? '8px'
+                                                : '0',
+                                        }}
+                                    >
+                                        <Dropdown
+                                            menu={presetMenuItems}
+                                            trigger={['click']}
+                                        >
                                             <Button>
                                                 {(() => {
-                                                    if (!this.state.selectedPreset) return 'Select';
-                                                    const metadata = this.state.presetMetadata.get(this.state.selectedPreset);
-                                                    return metadata?.name || path.basename(this.state.selectedPreset);
+                                                    if (
+                                                        !this.state
+                                                            .selectedPreset
+                                                    )
+                                                        return 'Select';
+                                                    const metadata =
+                                                        this.state.presetMetadata.get(
+                                                            this.state
+                                                                .selectedPreset,
+                                                        );
+                                                    return (
+                                                        metadata?.name ||
+                                                        path.basename(
+                                                            this.state
+                                                                .selectedPreset,
+                                                        )
+                                                    );
                                                 })()}
                                             </Button>
                                         </Dropdown>
-                                        <Button onClick={this.handlePresetLoadFromDropdown} disabled={!this.state.selectedPreset}>
+                                        <Button
+                                            onClick={
+                                                this
+                                                    .handlePresetLoadFromDropdown
+                                            }
+                                            disabled={
+                                                !this.state.selectedPreset
+                                            }
+                                        >
                                             Load Preset
                                         </Button>
                                     </div>
                                     {this.state.selectedPresetInfo && (
-                                        <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                                            {this.state.selectedPresetInfo.description && (
-                                                <div style={{ marginBottom: '4px' }}>
-                                                    <strong>Description:</strong> {this.state.selectedPresetInfo.description}
+                                        <div
+                                            style={{
+                                                fontSize: '12px',
+                                                color: '#666',
+                                                marginTop: '8px',
+                                            }}
+                                        >
+                                            {this.state.selectedPresetInfo
+                                                .description && (
+                                                <div
+                                                    style={{
+                                                        marginBottom: '4px',
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        Description:
+                                                    </strong>{' '}
+                                                    {
+                                                        this.state
+                                                            .selectedPresetInfo
+                                                            .description
+                                                    }
                                                 </div>
                                             )}
-                                            {this.state.selectedPresetInfo.author && (
+                                            {this.state.selectedPresetInfo
+                                                .author && (
                                                 <div>
-                                                    <strong>Author:</strong> {this.state.selectedPresetInfo.author}
+                                                    <strong>Author:</strong>{' '}
+                                                    {
+                                                        this.state
+                                                            .selectedPresetInfo
+                                                            .author
+                                                    }
                                                 </div>
                                             )}
                                         </div>
@@ -1411,40 +1571,46 @@ class BafangUartMotorSettingsView extends React.Component<
                         />
                     </>
                 )}
-                <Tooltip title="Read current parameters from the motor controller" placement="left">
+                <Tooltip
+                    title="Read current parameters from the motor controller"
+                    placement="left"
+                >
                     <FloatButton
                         icon={<SyncOutlined />}
                         type="primary"
                         style={{ right: 24, bottom: 94 }}
                         onClick={() => {
-                        connection.loadData();
-                        message.open({
-                            key: 'loading',
-                            type: 'loading',
-                            content: i18n.t('loading'),
-                        });
-                        setTimeout(() => {
-                            const { lastUpdateTime } = this.state;
-                            if (Date.now() - lastUpdateTime < 3000) {
-                                message.open({
-                                    key: 'loading',
-                                    type: 'success',
-                                    content: i18n.t('loaded_successfully'),
-                                    duration: 2,
-                                });
-                            } else {
-                                message.open({
-                                    key: 'loading',
-                                    type: 'error',
-                                    content: i18n.t('loading_error'),
-                                    duration: 2,
-                                });
-                            }
-                        }, 3000);
-                    }}
-                />
+                            connection.loadData();
+                            message.open({
+                                key: 'loading',
+                                type: 'loading',
+                                content: i18n.t('loading'),
+                            });
+                            setTimeout(() => {
+                                const { lastUpdateTime } = this.state;
+                                if (Date.now() - lastUpdateTime < 3000) {
+                                    message.open({
+                                        key: 'loading',
+                                        type: 'success',
+                                        content: i18n.t('loaded_successfully'),
+                                        duration: 2,
+                                    });
+                                } else {
+                                    message.open({
+                                        key: 'loading',
+                                        type: 'error',
+                                        content: i18n.t('loading_error'),
+                                        duration: 2,
+                                    });
+                                }
+                            }, 3000);
+                        }}
+                    />
                 </Tooltip>
-                <Tooltip title="Write all current parameters to the motor controller" placement="left">
+                <Tooltip
+                    title="Write all current parameters to the motor controller"
+                    placement="left"
+                >
                     <Popconfirm
                         title={i18n.t('parameter_writing_title')}
                         description={i18n.t('parameter_writing_confirm')}

@@ -410,7 +410,7 @@ export const ParameterNames: ParameterNamesStruct = {
     throttle: i18n.t('throttle_parameters'),
     low_voltage_limit: i18n.t('battery_low_limit'),
     current_limit: i18n.t('current_limit'),
-    assist_profile_0_current_limit: 'Assist Profile 0 Current Limit',//TODO
+    assist_profile_0_current_limit: 'Assist Profile 0 Current Limit', // TODO
     assist_profile_0_current_speed: 'Assist Profile 0 Speed Limit',
     assist_profile_1_current_limit: 'Assist Profile 1 Current Limit',
     assist_profile_1_current_speed: 'Assist Profile 1 Speed Limit',

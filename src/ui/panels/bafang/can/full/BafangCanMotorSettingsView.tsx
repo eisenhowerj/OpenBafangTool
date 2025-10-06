@@ -796,7 +796,7 @@ class BafangCanMotorSettingsView extends React.Component<
                     this.state.throttle_max_voltage;
             if (this.state.assist_levels !== null)
                 parameter1.assist_levels = this.state.assist_levels;
-            connection.controller.parameter1 = parameter1; //TODO
+            connection.controller.parameter1 = parameter1; // TODO
         }
         if (this.state.torque_profiles) {
             connection.controller.parameter2 = {
@@ -840,7 +840,7 @@ class BafangCanMotorSettingsView extends React.Component<
                     title={
                         <>
                             <WarningTwoTone twoToneColor="red" />
-                            {'   ' + i18n.t('warning') + '   '}
+                            {`   ${i18n.t('warning')}   `}
                             <WarningTwoTone twoToneColor="red" />
                         </>
                     }

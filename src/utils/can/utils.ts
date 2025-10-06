@@ -20,7 +20,7 @@ export function rereadParameter(
     dto: BesstReadedCanFrame,
     device: BesstDevice,
 ): void {
-    //TODO
+    // TODO
     device.sendCanFrame(
         DeviceNetworkId.BESST,
         dto.sourceDeviceCode,

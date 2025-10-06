@@ -72,7 +72,7 @@ class BafangCanBatteryView extends React.Component<ViewProps, ViewState> {
 
     getCellVoltageItems(): DescriptionsProps['items'] {
         if (!this.state.cells_voltage) return [];
-        let items: DescriptionsProps['items'] = [];
+        const items: DescriptionsProps['items'] = [];
         this.state.cells_voltage.forEach((voltage, cell) => {
             items?.push(
                 generateSimpleNumberMulticolumnListItem(

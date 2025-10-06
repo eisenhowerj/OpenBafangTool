@@ -1,10 +1,9 @@
 import { deepCopy } from 'deep-copy-ts';
-import BesstDevice from '../../besst/besst';
-import { BesstReadedCanFrame } from '../../besst/besst-types';
-import { DeviceNetworkId } from '../../besst/besst-types';
 import log from 'electron-log/renderer';
-import { RequestManager } from '../../../utils/can/RequestManager';
 import EventEmitter from 'events';
+import BesstDevice from '../../besst/besst';
+import { BesstReadedCanFrame, DeviceNetworkId } from '../../besst/besst-types';
+import { RequestManager } from '../../../utils/can/RequestManager';
 import {
     readParameter,
     rereadParameter,
@@ -236,8 +235,8 @@ export default class BafangCanController {
             CanReadCommandsList.Parameter1,
             CanReadCommandsList.Parameter2,
         ];
-        let readedSuccessfully = 0,
-            readedNonSuccessfully = 0;
+        let readedSuccessfully = 0;
+        let readedNonSuccessfully = 0;
 
         commands.forEach((command) => {
             new Promise<boolean>((resolve, reject) => {
@@ -274,11 +273,11 @@ export default class BafangCanController {
             return;
         }
         if (!this.besstDevice || !this.requestManager) return;
-        let wroteSuccessfully = 0,
-            wroteUnsuccessfully = 0;
-        let writePromises: Promise<boolean>[] = [];
+        let wroteSuccessfully = 0;
+        let wroteUnsuccessfully = 0;
+        const writePromises: Promise<boolean>[] = [];
         prepareStringWritePromise(
-            //TODO check
+            // TODO check
             this._manufacturer,
             DeviceNetworkId.DRIVE_UNIT,
             CanWriteCommandsList.Manufacturer,

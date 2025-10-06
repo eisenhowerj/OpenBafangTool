@@ -72,7 +72,8 @@ class ParameterInputComponent extends React.Component<
             disabled,
             decimalPlaces,
         } = this.props;
-        if (value === null && !this.props.nullIsOk) return i18n.t('not_available');
+        if (value === null && !this.props.nullIsOk)
+            return i18n.t('not_available');
         return (
             <Tooltip title={warningText} trigger="click" open={warning}>
                 <InputNumber
@@ -92,8 +93,8 @@ class ParameterInputComponent extends React.Component<
                                 number > warningAbove;
                             tmp ||=
                                 checkValue !== undefined && !checkValue(number);
-                            let multiplier = 10 ** (decimalPlaces as number);
-                            let value =
+                            const multiplier = 10 ** (decimalPlaces as number);
+                            const value =
                                 Math.floor(number * multiplier) / multiplier;
                             this.setState({
                                 value,
